@@ -7,8 +7,15 @@ const text = `
   // Comment for ddd
   "ddd": 23,
   "nested": {
+    // comment for nested.x
     "x": 1
+  },
+  "arr":[
+  { 
+      // comment for arr[0].item
+      "item":22
   }
+  ]
 }
 
 // Bottom comment
@@ -39,6 +46,6 @@ function main() {
 
   console.log('aggregated:', aggregated);
   console.log('named.lines:', named.lines);
-  console.log('named.names:', named.names);
+  console.log('named.names:', named.unames);
 }
 main();

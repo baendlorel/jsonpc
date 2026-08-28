@@ -109,8 +109,6 @@ export function uuidName(origin: string) {
   return origin + '_' + randomUUID();
 }
 
-// TODO 决定不改变本体的字段名，也就是ddd_uuid_comments这个，uuid_comments会被记录，ddd这个不会变成ddd_uuid
-// TODO 其实，数组的item也是对象的话，对象的属性值上方有注释应该也可以适用这套逻辑，本质上是一样的。
 /**
  * This is the core feature. Converts property with comments into a uuidName, so that
  * we can associate the right property with right comments.
@@ -118,9 +116,10 @@ export function uuidName(origin: string) {
  */
 export function convertCommentsToProperties(aggregated: Array<string | string[]>) {
   // Maps uuid name to the original name
-  const names = new Map<string, string>();
+  const unames = new Map<string, string>();
   const lines = aggregated.map((v, i) => {
     if (typeof v === 'string') {
+      // Return if it's a normal line, not a comment line
       return v;
     }
 
@@ -129,12 +128,14 @@ export function convertCommentsToProperties(aggregated: Array<string | string[]>
     const next = aggregated[i + 1] as string;
     const origin = interpretName(next);
     const uname = uuidName(origin);
-    aggregated[i + 1] = next.replace(origin, uname); // & Later we will change it back!
-    names.set(uname, origin);
+    // aggregated[i + 1] = next.replace(origin, uname); // & Later we will change it back!
+    // ! At this point, we don't know the prop path of this comment yet,
+    // ! so we use uuid names to mark them
+    unames.set(uname, origin);
     return `"${uname}":${JSON.stringify(v)},`;
   });
 
-  return { lines, names };
+  return { lines, unames };
 }
 
 export type PropMap = Map<string, { origin: string; current: string }>;
@@ -142,31 +143,31 @@ export type PropMap = Map<string, { origin: string; current: string }>;
 /**
  * Deep visit, collect prop path.
  * @param o the parsed object
- * @param names uname -> original name map
+ * @param unames uname -> original name map
  * @param path property name path for ReflectDeep
  * @param map returned map
  */
-export function visit(o: any, names: Map<string, string>, path: string[] = [], map: PropMap = new Map()): PropMap {
+export function visit(o: any, unames: Map<string, string>, path: string[] = [], map: PropMap = new Map()): PropMap {
   for (const key in o) {
-    const origin = names.get(key);
+    const origin = unames.get(key);
     const v = o[key];
     if (origin) {
       o[origin] = v;
-      delete o[key]; // & Delete the uuid name, so that later we can use the original name to get the value.
+      delete o[origin]; // & Delete the uuid name, so that later we can use the original name to get the value.
 
       // Use original prop name instead of uuid name
       // TODO 也许这里不需要了？因为有了uname了，它可以自己记得自己了，或者干脆把comment数据记载在外部
       // TODO 如果说本来子对象里有comment，但是这个子对象对应的数据被set成了新的，那么它的comment理应丢失。
       map.set(JSON.stringify(path.concat(origin)), { origin, current: key });
       if (typeof v === 'object') {
-        visit(v, names, path.concat(key), map);
+        visit(v, unames, path.concat(key), map);
       }
     } else if (Array.isArray(v)) {
       for (let i = 0; i < v.length; i++) {
-        visit(v[i], names, path.concat(key, i.toString()), map);
+        visit(v[i], unames, path.concat(key, i.toString()), map);
       }
     } else if (typeof v === 'object') {
-      visit(v, names, path.concat(key), map);
+      visit(v, unames, path.concat(key), map);
     }
   }
   return map;

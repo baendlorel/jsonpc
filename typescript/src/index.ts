@@ -47,7 +47,7 @@ export class JSONWithPropertyComment {
     const aggregated = aggregateComments(lines);
     const named = convertCommentsToProperties(aggregated);
     this.data = JSON.parse(named.lines.join(''));
-    this.propMap = visit(this.data, named.names);
+    this.propMap = visit(this.data, named.unames);
   }
 
   private resolve(propPath: string) {
