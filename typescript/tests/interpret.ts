@@ -1,0 +1,44 @@
+import { aggregateComments, convertCommentsToProperties, isComment, normalizeLines, stripTopBottom } from '../src/core';
+const text = `
+// Top comment 1
+// Top comment 2
+
+{
+  // Comment for ddd
+  "ddd": 23,
+  "nested": {
+    "x": 1
+  }
+}
+
+// Bottom comment
+`;
+function main() {
+  const lines = normalizeLines(text);
+  const withoutComments = lines.filter((v) => !isComment(v));
+  const rawJson = withoutComments.join('');
+  try {
+    JSON.parse(rawJson);
+  } catch (e) {
+    throw new Error(`Json text being parsed is invalid, ${(e as Error).message}`);
+  }
+
+  // & Now the json is some how valid.
+
+  // Fill the whole file level comments
+  const stripIndex = stripTopBottom(lines);
+  if (!Number.isNaN(stripIndex.bottom)) {
+    lines.splice(stripIndex.bottom); //! Must be done first, or indexes will change.
+  }
+  if (!Number.isNaN(stripIndex.top)) {
+    lines.splice(0, stripIndex.top + 1);
+  }
+
+  const aggregated = aggregateComments(lines);
+  const named = convertCommentsToProperties(aggregated);
+
+  console.log('aggregated:', aggregated);
+  console.log('named.lines:', named.lines);
+  console.log('named.names:', named.names);
+}
+main();

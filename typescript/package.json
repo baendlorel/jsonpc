@@ -1,0 +1,52 @@
+{
+  "name": "json-property-comment",
+  "version": "0.0.1",
+  "author": {
+    "name": "Kasukabe Tsumugi",
+    "email": "futami16237@gmail.com"
+  },
+  "purpose": "npm",
+  "description": "This is a lightweight JSON variant that allows comments under certain conditions.",
+  "description_zh": "这是一个轻量级的、可以写注释的json，注释满足一定条件",
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "test": "vitest",
+    "try": "tsx src/index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/baendlorel/jsonpc.git"
+  },
+  "keywords": [
+    "json",
+    "comments",
+    "typescript",
+    "nodenext"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/baendlorel/jsonpc/issues"
+  },
+  "homepage": "https://github.com/baendlorel/jsonpc/tree/main/#readme",
+  "dependencies": {
+    "reflect-deep": "^2.0.1"
+  },
+  "devDependencies": {
+    "@rollup/plugin-replace": "^6.0.3",
+    "@types/node": "^26.4.0",
+    "tsdown": "^0.22.14",
+    "tsx": "^4.23.12",
+    "vitest": "^4.1.11"
+  }
+}
