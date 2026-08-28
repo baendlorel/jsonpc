@@ -183,22 +183,22 @@ describe('core', () => {
   // convertCommentsToProperties
   // ──────────────────────────────────────────────
   describe('convertCommentsToProperties', () => {
-    it('should convert comments into _comment properties with uuid names', () => {
+    it('should convert comments into uuid-named properties with comments as value', () => {
       const input = ['{', ['// comment for x'], '"x": 1', '}'];
       const result = convertCommentsToProperties(input);
 
       // Parse the resulting JSON to verify structure
       const parsed = JSON.parse(result.lines.join(''));
 
-      // Find the uuid key (not _comments key)
-      const uuidKey = Object.keys(parsed).find((k) => !k.endsWith(COMMENT_SUFFIX));
+      // Find the uuid key — it holds the comment array directly
+      const uuidKey = Object.keys(parsed).find((k) => k.match(/^x_/));
       expect(uuidKey).toBeDefined();
       expect(uuidKey).toMatch(/^x_/);
 
-      // Check the comment key
-      const commentKey = uuidKey + COMMENT_SUFFIX;
-      expect(parsed[commentKey]).toEqual(['// comment for x']);
-      expect(parsed[uuidKey as any]).toBe(1);
+      // The uuid key's value is the comment array
+      expect(parsed[uuidKey as any]).toEqual(['// comment for x']);
+      // The original property is also present
+      expect(parsed['x']).toBe(1);
     });
 
     it('should handle multiple properties with comments', () => {
@@ -206,15 +206,19 @@ describe('core', () => {
       const result = convertCommentsToProperties(input);
       const parsed = JSON.parse(result.lines.join(''));
 
-      const keys = Object.keys(parsed).filter((k) => !k.endsWith(COMMENT_SUFFIX));
-      expect(keys).toHaveLength(2);
+      // uuid keys hold comment arrays, original keys hold values
+      const uuidKeys = Object.keys(parsed).filter((k) => k.match(/^[a-z]+_[0-9a-f-]+$/));
+      expect(uuidKeys).toHaveLength(2);
+      // Original keys preserved
+      expect(parsed['a']).toBe(1);
+      expect(parsed['b']).toBe(2);
     });
 
     it('should handle lines without comments as-is', () => {
       const input = ['"x": 1'];
       const result = convertCommentsToProperties(input);
       expect(result.lines).toEqual(['"x": 1']);
-      expect(result.names.size).toBe(0);
+      expect(result.unames.size).toBe(0);
     });
   });
 
@@ -223,42 +227,54 @@ describe('core', () => {
   // ──────────────────────────────────────────────
   describe('visit', () => {
     it('should collect prop paths for uuid-named keys', () => {
-      const obj = { foo_uuid: 1, foo_uuid_comments: ['// hi'] };
+      // In the new design, the uuid key holds the comment array directly
+      const obj = { foo_uuid: ['// hi'], foo: 1 };
       const names = new Map([['foo_uuid', 'foo']]);
       const result = visit(obj, names);
 
-      expect(result.get(JSON.stringify(['foo']))).toEqual({ origin: 'foo', current: 'foo_uuid' });
+      // visit stores the uuid key's value (the comment array) under the origin path
+      expect(result.get(['foo'])).toEqual(['// hi']);
+      // The uuid key is deleted from the original object
+      expect(obj).not.toHaveProperty('foo_uuid');
+      expect(obj).toHaveProperty('foo');
     });
 
     it('should traverse nested objects', () => {
-      const obj = { a_uuid: { b: 2 }, a_uuid_comments: ['// a'] };
+      const obj = { a_uuid: { b: 2 }, a: { b: 2 } };
       const names = new Map([['a_uuid', 'a']]);
       const result = visit(obj, names);
 
-      expect(result.get(JSON.stringify(['a']))).toEqual({ origin: 'a', current: 'a_uuid' });
-      expect(result.get(JSON.stringify(['a', 'b']))).toBeUndefined(); // Q11 bug: nested under uuid key not collected
+      // visit stores the uuid key's value under the origin path
+      expect(result.get(['a'])).toEqual({ b: 2 });
+      // The uuid key is deleted from the object
+      expect(obj).not.toHaveProperty('a_uuid');
+      expect(obj).toHaveProperty('a');
     });
 
     it('should traverse arrays and collect uuid-renamed props only', () => {
       // visit only collects properties whose keys have been uuid-renamed (with comments)
-      // Plain properties without comments are not recorded in the propMap
+      // Plain properties without comments are not recorded
       const obj = { arr: [{ x: 1 }, { x: 2 }] };
       const names = new Map();
       const result = visit(obj, names);
-      expect(result.size).toBe(0);
+      // No uuid keys found — nothing stored in map
+      expect(result.get(['arr', '0', 'x'])).toBeUndefined();
 
       // When array elements have uuid-renamed keys, they should be collected
       const names2 = new Map([['x_uuid', 'x']]);
-      const obj2 = { arr: [{ x_uuid: 1 }] };
+      const obj2 = { arr: [{ x_uuid: ['// hi'], x: 1 }] };
       const result2 = visit(obj2, names2);
-      // visit finds arr[0].x_uuid and maps it to origin 'x' at path ['arr', '0', 'x']
-      expect(result2.size).toBe(1);
-      expect(result2.get(JSON.stringify(['arr', '0', 'x']))).toEqual({ origin: 'x', current: 'x_uuid' });
+      // visit finds arr[0].x_uuid and stores value under origin path ['arr', '0', 'x']
+      expect(result2.get(['arr', '0', 'x'])).toEqual(['// hi']);
+      // uuid key deleted, original key preserved
+      expect(obj2.arr[0]).not.toHaveProperty('x_uuid');
+      expect(obj2.arr[0]).toHaveProperty('x');
     });
 
     it('should handle empty object', () => {
       const result = visit({}, new Map());
-      expect(result.size).toBe(0);
+      // No uuid keys found — nothing stored
+      expect(result.get(['anything'])).toBeUndefined();
     });
   });
 

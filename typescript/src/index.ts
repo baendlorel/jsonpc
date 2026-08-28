@@ -5,17 +5,17 @@ import {
   normalizeLines,
   stripTopBottom,
   convertCommentsToProperties,
-  type PropMap,
   visit,
-  uuidName,
+  clone,
 } from './core.js';
-import { COMMENT_SUFFIX } from './consts.js';
+import { MultiKeyMap } from './multi-map.js';
 
 export class JSONWithPropertyComment {
   private topComments: string[] = [];
   private bottomComments: string[] = [];
 
-  private propMap: PropMap;
+  /** Maps property path (string[]) → comment lines (string[]) */
+  private commentMap: MultiKeyMap = new MultiKeyMap();
 
   private data: any;
 
@@ -47,42 +47,17 @@ export class JSONWithPropertyComment {
     const aggregated = aggregateComments(lines);
     const named = convertCommentsToProperties(aggregated);
     this.data = JSON.parse(named.lines.join(''));
-    this.propMap = visit(this.data, named.unames);
-  }
-
-  private resolve(propPath: string) {
-    const k = propPath.split('.');
-    const kstr = JSON.stringify(k);
-    return { k, kstr, p: this.propMap.get(kstr) };
+    // visit stores comment arrays in commentMap keyed by property path, and deletes uuid keys from data
+    this.commentMap = visit(this.data, named.unames);
   }
 
   /**
    * Set comment for a property path.
-   * - if the property path does not exist, it will be created as `null`.
    * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
    * @param comments comments array
    */
   setComments(propPath: string, comments: string[]) {
-    const { k, kstr, p } = this.resolve(propPath);
-
-    if (p) {
-      k[k.length - 1] = p.current + COMMENT_SUFFIX;
-      ReflectDeep.set(this.data, k, comments);
-    } else {
-      const value = ReflectDeep.get(this.data, k);
-      ReflectDeep.deleteProperty(this.data, k);
-
-      const origin = k[k.length - 1];
-      const current = uuidName(origin);
-
-      k[k.length - 1] = current;
-      ReflectDeep.set(this.data, k, value);
-
-      k[k.length - 1] = current + COMMENT_SUFFIX;
-      ReflectDeep.set(this.data, k, comments);
-
-      this.propMap.set(kstr, { origin, current });
-    }
+    this.commentMap.set(propPath.split('.'), comments);
   }
 
   /**
@@ -91,31 +66,15 @@ export class JSONWithPropertyComment {
    * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
    */
   getComments(propPath: string): string[] | undefined {
-    const { k, p } = this.resolve(propPath);
-    if (!p) {
-      return undefined;
-    }
-
-    k[k.length - 1] = p.current + COMMENT_SUFFIX;
-    return ReflectDeep.get(this.data, k);
+    return this.commentMap.get(propPath.split('.'));
   }
 
   set(propPath: string, value: any) {
-    const k = propPath.split('.');
-    const kstr = JSON.stringify(k);
-    const exists = this.propMap.get(kstr);
-    if (exists) {
-      k[k.length - 1] = exists.current;
-    }
-    ReflectDeep.set(this.data, k, value);
+    ReflectDeep.set(this.data, propPath.split('.'), value);
   }
 
   get(propPath: string, defaultValue?: any) {
-    const { k, p } = this.resolve(propPath);
-    if (p) {
-      k[k.length - 1] = p.current;
-    }
-    return ReflectDeep.get(this.data, k) ?? defaultValue;
+    return ReflectDeep.get(this.data, propPath.split('.')) ?? defaultValue;
   }
 
   /**
@@ -129,61 +88,54 @@ export class JSONWithPropertyComment {
   stringify(replacer?: (this: any, key: string, value: any) => any, space?: number) {
     const pad = space ?? 2;
 
-    // Build reverse map: currentName → originName
-    const reverseNameMap = new Map<string, string>();
-    for (const [, v] of this.propMap) {
-      reverseNameMap.set(v.current, v.origin);
-    }
-
     const lines: string[] = [];
 
     /**
      * Serialize a value, appending lines to `lines`.
-     * @returns the index of the last line appended for this value.
+     * @param path current property path (string[]) for comment lookup
      */
-    const serialize = (obj: any, depth: number): number => {
+    const serialize = (obj: any, depth: number, path: string[] = []): void => {
       const prefix = ' '.repeat(depth * pad);
 
       if (obj === null || typeof obj !== 'object') {
         lines.push(`${prefix}${JSON.stringify(obj)}`);
-        return lines.length - 1;
+        return;
       }
 
       if (Array.isArray(obj)) {
         if (obj.length === 0) {
           lines.push(`${prefix}[]`);
-          return lines.length - 1;
+          return;
         }
         lines.push(`${prefix}[`);
         for (let i = 0; i < obj.length; i++) {
           const val = replacer ? replacer.call(obj, String(i), obj[i]) : obj[i];
           const isLast = i === obj.length - 1;
-          serialize(val, depth + 1);
+          serialize(val, depth + 1, path.concat(String(i)));
           if (!isLast) {
             lines[lines.length - 1] += ',';
           }
         }
         lines.push(`${prefix}]`);
-        return lines.length - 1;
+        return;
       }
 
       // Plain object
-      const keys = Object.keys(obj).filter((k) => !k.endsWith(COMMENT_SUFFIX));
+      const keys = Object.keys(obj);
       if (keys.length === 0) {
         lines.push(`${prefix}{}`);
-        return lines.length - 1;
+        return;
       }
 
       lines.push(`${prefix}{`);
       for (let i = 0; i < keys.length; i++) {
-        const uuidKey = keys[i];
-        const originKey = reverseNameMap.get(uuidKey) ?? uuidKey;
-        const val = replacer ? replacer.call(obj, originKey, obj[uuidKey]) : obj[uuidKey];
+        const key = keys[i];
+        const val = replacer ? replacer.call(obj, key, obj[key]) : obj[key];
         const isLast = i === keys.length - 1;
+        const propPath = path.concat(key);
 
         // Emit comments before this property
-        const commentKey = uuidKey + COMMENT_SUFFIX;
-        const comments = obj[commentKey];
+        const comments = this.commentMap.get(propPath);
         if (Array.isArray(comments)) {
           for (const c of comments) {
             lines.push(`${' '.repeat((depth + 1) * pad)}${c}`);
@@ -191,17 +143,15 @@ export class JSONWithPropertyComment {
         }
 
         // Emit the property key
-        const keyLine = `${' '.repeat((depth + 1) * pad)}"${originKey}":`;
+        const keyLine = `${' '.repeat((depth + 1) * pad)}"${key}":`;
         lines.push(keyLine);
 
         // Serialize the value — for primitives, inline on the same line
         const isObj = val !== null && typeof val === 'object';
         if (!isObj) {
-          // Append primitive value on the same line as the key
-          const str = JSON.stringify(val);
-          lines[lines.length - 1] += str;
+          lines[lines.length - 1] += JSON.stringify(val);
         } else {
-          serialize(val, depth + 1);
+          serialize(val, depth + 1, propPath);
         }
 
         // Add trailing comma if not last
@@ -210,7 +160,6 @@ export class JSONWithPropertyComment {
         }
       }
       lines.push(`${prefix}}`);
-      return lines.length - 1;
     };
 
     // Top-level file comments
@@ -229,41 +178,16 @@ export class JSONWithPropertyComment {
   }
 
   /**
-   * Return a pure js object, stripping all comment/uuid artifacts.
-   * - UUID'd keys are replaced with their original names.
-   * - `_comments` keys are removed entirely.
-   * - Nested structures are handled recursively.
+   * Return a pure js object, stripping all comment artifacts.
+   * - The internal data is already clean (uuid keys removed by visit),
+   *   so this is a simple deep clone.
    */
   toJSON<T = any>(): T {
-    const reverseNameMap = new Map<string, string>();
-    for (const [, v] of this.propMap) {
-      reverseNameMap.set(v.current, v.origin);
-    }
-
-    const clean = (obj: any): any => {
-      if (obj === null || typeof obj !== 'object') {
-        return obj;
-      }
-
-      if (Array.isArray(obj)) {
-        return obj.map(clean);
-      }
-
-      const result: Record<string, any> = {};
-      for (const key of Object.keys(obj)) {
-        if (key.endsWith(COMMENT_SUFFIX)) {
-          continue; // skip comment artifacts
-        }
-        const originKey = reverseNameMap.get(key) ?? key;
-        result[originKey] = clean(obj[key]);
-      }
-      return result;
-    };
-
-    return clean(this.data) as T;
+    return clone(this.data) as T;
   }
 
   /**
+   * Transform to standard JSON string without comments.
    * Equal to `JSON.stringify(this.toJSON(), null, 2)`.
    */
   toJSONString(replacer?: (this: any, key: string, value: any) => any, space?: string | number): string;

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { MultiKeyMap } from './multi-map.js';
+import { _isArray } from './common.js';
 
 export function isComment(t: string) {
   return t.startsWith('//');
@@ -176,3 +177,19 @@ export function visit(
   }
   return map;
 }
+
+export const clone: <T = any>(o: T) => T =
+  structuredClone ??
+  function <T = any>(obj: T): T {
+    if (obj === null || typeof obj !== 'object') {
+      return obj;
+    }
+    if (_isArray(obj)) {
+      return obj.map(clone) as any;
+    }
+    const result: Record<string, any> = {};
+    for (const key in obj) {
+      result[key] = clone(obj[key]);
+    }
+    return result as T;
+  };

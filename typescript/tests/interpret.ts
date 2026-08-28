@@ -5,7 +5,7 @@ import {
   normalizeLines,
   stripTopBottom,
   visit,
-} from '../src/core';
+} from '../src/core.js';
 const text = `
 // Top comment 1
 // Top comment 2
