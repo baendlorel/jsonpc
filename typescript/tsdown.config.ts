@@ -20,6 +20,8 @@ export default defineConfig({
       delimiter: ['', ''],
       values: {
         __IS_DEV__: isDev ? 'true' : 'false',
+        COMMENT_PREFIX: "'// '",
+        '${COMMENT_PREFIX}': '// ',
       },
     }),
   ],

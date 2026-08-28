@@ -1,7 +1,7 @@
 /**
  * This is a Map that use an array of keys to map to a value.
  */
-export class MultiKeyMap {
+export class PathMap {
   private map = new Map<any, any>();
 
   get<V = any>(keys: any[]): V | undefined {

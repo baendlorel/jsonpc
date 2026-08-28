@@ -3,25 +3,15 @@ import {
   isComment,
   normalizeLines,
   stripTopBottom,
-  aggregateComments,
+  aggregate,
   interpretName,
   uuidName,
-  convertCommentsToProperties,
+  mark,
   visit,
 } from '../src/core.js';
-import { COMMENT_SUFFIX } from '../src/consts.js';
 import { JSONWithPropertyComment } from '../src/index.js';
 
 describe('core', () => {
-  // ──────────────────────────────────────────────
-  // consts.ts
-  // ──────────────────────────────────────────────
-  describe('COMMENT_SUFFIX', () => {
-    it('should be _comments', () => {
-      expect(COMMENT_SUFFIX).toBe('_comments');
-    });
-  });
-
   // ──────────────────────────────────────────────
   // isComment
   // ──────────────────────────────────────────────
@@ -115,24 +105,24 @@ describe('core', () => {
   describe('aggregateComments', () => {
     it('should aggregate consecutive comments into arrays', () => {
       const lines = ['{', '// c1', '// c2', '"a": 1', '}'];
-      const result = aggregateComments(lines);
-      expect(result).toEqual(['{', ['// c1', '// c2'], '"a": 1', '}']);
+      const result = aggregate(lines);
+      expect(result).toEqual(['{', ['c1', 'c2'], '"a": 1', '}']);
     });
 
     it('should keep non-comment lines as strings', () => {
       const lines = ['"a":1', '"b":2'];
-      const result = aggregateComments(lines);
+      const result = aggregate(lines);
       expect(result).toEqual(['"a":1', '"b":2']);
     });
 
     it('should handle single comment line', () => {
       const lines = ['{', '// comment', '"a":1', '}'];
-      const result = aggregateComments(lines);
-      expect(result).toEqual(['{', ['// comment'], '"a":1', '}']);
+      const result = aggregate(lines);
+      expect(result).toEqual(['{', ['comment'], '"a":1', '}']);
     });
 
     it('should handle empty input', () => {
-      expect(aggregateComments([])).toEqual([]);
+      expect(aggregate([])).toEqual([]);
     });
   });
 
@@ -185,7 +175,7 @@ describe('core', () => {
   describe('convertCommentsToProperties', () => {
     it('should convert comments into uuid-named properties with comments as value', () => {
       const input = ['{', ['// comment for x'], '"x": 1', '}'];
-      const result = convertCommentsToProperties(input);
+      const result = mark(input);
 
       // Parse the resulting JSON to verify structure
       const parsed = JSON.parse(result.lines.join(''));
@@ -203,7 +193,7 @@ describe('core', () => {
 
     it('should handle multiple properties with comments', () => {
       const input = ['{', ['// a comment'], '"a": 1,', ['// b comment'], '"b": 2', '}'];
-      const result = convertCommentsToProperties(input);
+      const result = mark(input);
       const parsed = JSON.parse(result.lines.join(''));
 
       // uuid keys hold comment arrays, original keys hold values
@@ -216,7 +206,7 @@ describe('core', () => {
 
     it('should handle lines without comments as-is', () => {
       const input = ['"x": 1'];
-      const result = convertCommentsToProperties(input);
+      const result = mark(input);
       expect(result.lines).toEqual(['"x": 1']);
       expect(result.unames.size).toBe(0);
     });
@@ -308,7 +298,7 @@ describe('core', () => {
     it('should get comments for a property', () => {
       const jpc = new JSONWithPropertyComment(sampleText);
       const comments = jpc.getComments('ddd');
-      expect(comments).toEqual(['// Comment for ddd']);
+      expect(comments).toEqual(['Comment for ddd']);
     });
 
     it('should return undefined for properties without comments', () => {
@@ -359,7 +349,7 @@ describe('core', () => {
 
       // Parse the output again
       const jpc2 = new JSONWithPropertyComment(output);
-      expect(jpc2.getComments('ddd')).toEqual(['// Comment for ddd']);
+      expect(jpc2.getComments('ddd')).toEqual(['Comment for ddd']);
       expect(jpc2.get('ddd')).toBe(23);
     });
 

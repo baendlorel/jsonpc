@@ -1,9 +1,17 @@
 import { randomUUID } from 'node:crypto';
-import { MultiKeyMap } from './multi-map.js';
+import { PathMap } from './path-map.js';
 import { _isArray } from './common.js';
 
 export function isComment(t: string) {
   return t.startsWith('//');
+}
+
+export function validComments(comments: any): comments is string[] {
+  return _isArray(comments) && comments.every((c) => typeof c === 'string');
+}
+
+export function stripPrefix(t: string): string {
+  return t.replace(/^\/\/\s?/, '');
 }
 
 export function normalizeLines(text: string) {
@@ -37,8 +45,9 @@ export function stripTopBottom(lines: string[]) {
 
 /**
  * Multiple comment lines will be collapsed into a string array.
+ * Comment prefix `//` is stripped from each line.
  */
-export function aggregateComments(lines: string[]): Array<string | string[]> {
+export function aggregate(lines: string[]): Array<string | string[]> {
   const modified: Array<string | string[]> = [];
   let array: string[] = [];
   for (let i = 0; i < lines.length; i++) {
@@ -46,7 +55,7 @@ export function aggregateComments(lines: string[]): Array<string | string[]> {
       if (array.length === 0) {
         modified.push(array);
       }
-      array.push(lines[i]);
+      array.push(stripPrefix(lines[i]));
     } else {
       array = [];
       modified.push(lines[i]);
@@ -112,11 +121,11 @@ export function uuidName(origin: string) {
 }
 
 /**
- * This is the core feature. Converts property with comments into a uuidName, so that
+ * Marks property with comments into a uuidName, so that
  * we can associate the right property with right comments.
- * @param aggregated muiltiple comment lines is collapsed into a string array.
+ * @param aggregated muiltiple comments are collapsed into `string[]`.
  */
-export function convertCommentsToProperties(aggregated: Array<string | string[]>) {
+export function mark(aggregated: Array<string | string[]>) {
   // Maps uuid name to the original name
   const unames = new Map<string, string>();
   const lines = aggregated.map((v, i) => {
@@ -125,14 +134,10 @@ export function convertCommentsToProperties(aggregated: Array<string | string[]>
       return v;
     }
 
-    // // prop的注释
-    // "prop":"value" -> "prop_2e09b0fc-b188-4d50-b97e-e21dc0694c1c_comment":"// prop的注释","prop_2e09b0fc-b188-4d50-b97e-e21dc0694c1c":"value"
-    const next = aggregated[i + 1] as string;
-    const origin = interpretName(next);
+    const origin = interpretName(aggregated[i + 1] as string);
     const uname = uuidName(origin);
-    // aggregated[i + 1] = next.replace(origin, uname); // & Later we will change it back!
-    // ! At this point, we don't know the prop path of this comment yet,
-    // ! so we use uuid names to mark them
+    // ! At this point, we don't know the full property path of
+    // ! this comment yet, so we use uuid names to mark them
     unames.set(uname, origin);
     return `"${uname}":${JSON.stringify(v)},`;
   });
@@ -147,17 +152,13 @@ export function convertCommentsToProperties(aggregated: Array<string | string[]>
  * @param path property name path for ReflectDeep
  * @param map returned map
  */
-export function visit(
-  o: any,
-  unames: Map<string, string>,
-  path: string[] = [],
-  map: MultiKeyMap = new MultiKeyMap(),
-): MultiKeyMap {
+export function visit(o: any, unames: Map<string, string>, path: string[] = [], map: PathMap = new PathMap()) {
   for (const key in o) {
     const origin = unames.get(key);
     const v = o[key];
 
-    // & If the key is a uuid name, we will use the original name to map to the value.
+    // & If the key is a uuid name, we will use the original name
+    // & to map to the value.
     if (origin) {
       // Store the comments outside the object.
       delete o[key];
