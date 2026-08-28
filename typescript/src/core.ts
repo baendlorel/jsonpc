@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { MultiKeyMap } from './multi-map.js';
 
 export function isComment(t: string) {
   return t.startsWith('//');
@@ -138,8 +139,6 @@ export function convertCommentsToProperties(aggregated: Array<string | string[]>
   return { lines, unames };
 }
 
-export type PropMap = Map<string, { origin: string; current: string }>;
-
 /**
  * Deep visit, collect prop path.
  * @param o the parsed object
@@ -147,18 +146,21 @@ export type PropMap = Map<string, { origin: string; current: string }>;
  * @param path property name path for ReflectDeep
  * @param map returned map
  */
-export function visit(o: any, unames: Map<string, string>, path: string[] = [], map: PropMap = new Map()): PropMap {
+export function visit(
+  o: any,
+  unames: Map<string, string>,
+  path: string[] = [],
+  map: MultiKeyMap = new MultiKeyMap(),
+): MultiKeyMap {
   for (const key in o) {
     const origin = unames.get(key);
     const v = o[key];
-    if (origin) {
-      o[origin] = v;
-      delete o[origin]; // & Delete the uuid name, so that later we can use the original name to get the value.
 
-      // Use original prop name instead of uuid name
-      // TODO 也许这里不需要了？因为有了uname了，它可以自己记得自己了，或者干脆把comment数据记载在外部
-      // TODO 如果说本来子对象里有comment，但是这个子对象对应的数据被set成了新的，那么它的comment理应丢失。
-      map.set(JSON.stringify(path.concat(origin)), { origin, current: key });
+    // & If the key is a uuid name, we will use the original name to map to the value.
+    if (origin) {
+      // Store the comments outside the object.
+      delete o[key];
+      map.set(path.concat(origin), v);
       if (typeof v === 'object') {
         visit(v, unames, path.concat(key), map);
       }
@@ -168,6 +170,8 @@ export function visit(o: any, unames: Map<string, string>, path: string[] = [], 
       }
     } else if (typeof v === 'object') {
       visit(v, unames, path.concat(key), map);
+    } else {
+      // primitives, do nothing
     }
   }
   return map;
