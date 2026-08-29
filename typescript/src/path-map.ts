@@ -9,6 +9,8 @@ function clear(map: Map<any, any>) {
 
 /**
  * This is a Map that use an array of keys to map to a value.
+ *
+ * Used to store comments string array.
  */
 export class PathMap {
   private map = new Map<any, any>();
@@ -46,6 +48,15 @@ export class PathMap {
       cur = next;
     }
     cur.delete(keys[keys.length - 1]);
+  }
+
+  move(oldKeys: any[], newKeys: any[]) {
+    const value = this.get(oldKeys);
+    if (value === undefined) {
+      return;
+    }
+    this.delete(oldKeys);
+    this.set(newKeys, value);
   }
 
   clear() {

@@ -12,7 +12,7 @@ import {
 } from './core.js';
 import { PathMap } from './path-map.js';
 import { _isArray } from './common.js';
-import { type ArrayFunctions, type ArrayOperationArgs } from './array.js';
+import { type ArrayFunctions, type ArrayOperationArgs, arrayOpers } from './array.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
   (globalThis as any).COMMENT_PREFIX = '// ';
@@ -108,6 +108,14 @@ export class JSONPC {
     if (!_isArray(arr)) {
       throw new TypeError(`The property path "${propPath}" is not an array.`);
     }
+
+    // First, sync the commentsMap by calling the corresponding array operation handler
+    const operHandler = arrayOpers[functionName];
+    if (operHandler) {
+      operHandler(arr, args as any[], this.commentMap, propPath.split('.'));
+    }
+
+    // Then, perform the actual array operation
     arr[functionName](...args);
 
     return this;
