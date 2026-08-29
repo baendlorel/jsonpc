@@ -64,8 +64,16 @@ export class JSONPC {
    * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
    * @param comments comment content lines (without `//` prefix)
    */
-  setComments(propPath: string, comments: string[]) {
-    this.commentMap.set(propPath.split('.'), comments);
+  setComments(propPath: string, comments: string[]): this;
+  setComments(propPath: string, fn: (oldComments: string[]) => string[]): this;
+  setComments(propPath: string, args: string[] | ((oldComments: string[]) => string[])): this {
+    if (typeof args === 'function') {
+      args = args(this.commentMap.get(propPath.split('.')) ?? []);
+    } else if (!_isArray(args)) {
+      throw new TypeError(`Invalid comments argument, must be an array of strings or a function.`);
+    }
+    this.commentMap.set(propPath.split('.'), args);
+    return this;
   }
 
   /**
@@ -78,8 +86,9 @@ export class JSONPC {
     return this.commentMap.get(propPath.split('.'));
   }
 
-  set(propPath: string, value: any) {
+  set(propPath: string, value: any): this {
     ReflectDeep.set(this.data, propPath.split('.'), value);
+    return this;
   }
 
   get(propPath: string, defaultValue?: any) {
