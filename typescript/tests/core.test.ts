@@ -11,6 +11,7 @@ import {
   serialize,
 } from '../src/core.js';
 import { JSONPC } from '../src/index.js';
+import { ReflectDeep } from 'reflect-deep';
 
 describe('core', () => {
   describe('isComment', () => {
@@ -200,21 +201,22 @@ describe('core', () => {
       const result = visit(obj, names);
       expect(obj).not.toHaveProperty('a_uuid');
       expect(obj).toHaveProperty('a');
-      expect(result.get(['a'])).toEqual({ b: 2 });
+      expect(ReflectDeep.get(result, ['a'])).toEqual({ b: 2 });
     });
 
     it('should traverse nested objects and collect uuid-renamed props', () => {
       const obj = { a: { b_uuid: ['// hi'], b: 1 } };
       const names = new Map([['b_uuid', 'b']]);
       const result = visit(obj, names);
-      expect(result.get(['a', 'b'])).toEqual(['// hi']);
+      console.log('visit result:', result);
+      expect(ReflectDeep.get(result, ['a', 'b'])).toEqual(['// hi']);
       expect(obj.a).not.toHaveProperty('b_uuid');
       expect(obj.a).toHaveProperty('b');
     });
 
     it('should handle empty object', () => {
       const result = visit({}, new Map());
-      expect(result.get(['anything'])).toBeUndefined();
+      expect(ReflectDeep.get(result, ['anything'])).toBeUndefined();
     });
   });
 

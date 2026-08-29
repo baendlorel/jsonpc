@@ -238,6 +238,7 @@ describe('Array operations with commentsMap synchronization', () => {
       jpc.setComments('data.items.2', ['third item']);
 
       jpc.updateArray('data.items', 'shift', []);
+      console.log(jpc.commentMap.map.get('data').get('items'));
 
       expect(jpc.getComments('data.items.0')).toEqual(['second item']);
       expect(jpc.getComments('data.items.1')).toEqual(['third item']);

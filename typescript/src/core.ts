@@ -1,4 +1,4 @@
-import { PathMap } from './path-map.js';
+import { ReflectDeep } from 'reflect-deep';
 import { _isArray, _keys } from './common.js';
 
 export function isComment(t: string) {
@@ -206,33 +206,40 @@ export function mark(aggregated: Array<string | string[]>) {
  * @param o the parsed object
  * @param unames uname -> original name map
  * @param path property name path for ReflectDeep
- * @param map returned map
+ * @param commentMap returned map
  */
-export function visit(o: any, unames: Map<string, string>, path: string[] = [], map: PathMap = new PathMap()) {
-  for (const key in o) {
-    const origin = unames.get(key);
-    const v = o[key];
+export function visit(o: any, unames: Map<string, string>, path: string[] = [], commentMap: any = {}) {
+  // 1、区分数组还是对象
+  // 2、如果找到符合unames的再处理；
+  // 3、没找到就进一步遍历。
 
+  for (const k in o) {
+    const origin = unames.get(k);
+    const v = o[k];
     // & If the key is a uuid name, we will use the original name
     // & to map to the value.
     if (origin) {
       // Store the comments outside the object.
-      delete o[key];
-      map.set(path.concat(origin), v);
+      delete o[k];
+      const nextPath = path.concat(origin);
+      ReflectDeep.set(commentMap, nextPath, v);
       if (typeof v === 'object') {
-        visit(v, unames, path.concat(key), map);
+        visit(v, unames, nextPath, commentMap);
       }
     } else if (_isArray(v)) {
+      const arr: any[] = [];
+      const nextPath = path.concat(k);
+      ReflectDeep.set(commentMap, nextPath, arr);
       for (let i = 0; i < v.length; i++) {
-        visit(v[i], unames, path.concat(key, i.toString()), map);
+        visit(v[i], unames, nextPath.concat(String(i)), commentMap);
       }
     } else if (typeof v === 'object') {
-      visit(v, unames, path.concat(key), map);
+      visit(v, unames, path.concat(k), commentMap);
     } else {
       // primitives, do nothing
     }
   }
-  return map;
+  return commentMap;
 }
 
 export const clone: <T = any>(o: T) => T =
@@ -256,7 +263,7 @@ export const clone: <T = any>(o: T) => T =
  * @param path current property path (string[]) for comment lookup
  */
 export function serialize(
-  commentMap: PathMap,
+  commentMap: any,
   obj: any,
   pad: number,
   replacer: ((this: any, key: string, value: any) => any) | (number | string)[] | null,
@@ -355,7 +362,7 @@ export function serialize(
     const indent = ' '.repeat((depth + 1) * pad);
 
     // Emit comments before this property
-    const comments = commentMap.get(propPath);
+    const comments = ReflectDeep.get(commentMap, propPath);
     if (_isArray(comments)) {
       for (let i = 0; i < comments.length; i++) {
         lines.push(`${indent}${COMMENT_PREFIX} ${comments[i]}`);

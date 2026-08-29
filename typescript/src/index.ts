@@ -1,6 +1,5 @@
 import { ReflectDeep } from 'reflect-deep';
 import { isComment, trim, stripTopBottom, aggregate, stripPrefix, mark, visit, clone, serialize } from './core.js';
-import { PathMap } from './path-map.js';
 import { _isArray } from './common.js';
 import { arrayOpers, getArray, SupportedArrayMethods } from './array.js';
 
@@ -15,7 +14,7 @@ export class JSONPC {
   /**
    * Map a property path to a comment string array.
    */
-  private commentMap = new PathMap();
+  private commentMap: any;
   private data: any;
 
   /**
@@ -60,7 +59,7 @@ export class JSONPC {
     if (!_isArray(comments)) {
       throw new TypeError(`Invalid comments argument, must be an array of strings or a function.`);
     }
-    this.commentMap.set(propPath.split('.'), comments);
+    ReflectDeep.set(this.commentMap, propPath.split('.'), comments);
     return this;
   }
 
@@ -71,7 +70,7 @@ export class JSONPC {
    * @returns comment content lines (without `//` prefix), or `undefined`
    */
   getComments(propPath: string): string[] | undefined {
-    return this.commentMap.get(propPath.split('.'));
+    return ReflectDeep.get(this.commentMap, propPath.split('.'));
   }
 
   /**
