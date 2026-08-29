@@ -51,7 +51,11 @@ function main() {
   const map = visit(JSON.parse(named.lines.join('')), named.unames);
   console.log('map:', map);
 
+  console.log('-'.repeat(50));
   const j = new JSONWithPropertyComment(text);
+  console.log(j.stringify(null, 2));
+  console.log('-'.repeat(50));
+  j.setComments('arr.0.item', ['New comment for arr[0].item']);
   console.log(j.stringify(null, 2));
 }
 main();

@@ -178,6 +178,7 @@ export class JSONWithPropertyComment {
         }
 
         // Add trailing comma if not last
+        // EPIC 添加trailing comma，但是在不用eval的情况下很困难
         if (!isLast) {
           lines[lines.length - 1] += ',';
         }
