@@ -9,14 +9,27 @@ type Operations = {
     arr: any[],
     args: Parameters<Array<any>[K]>,
     commentsMap: PathMap,
-    basePropPath: string[],
+    path: string[],
   ) => void;
 };
 
 export type SupportedArrayMethods = 'push' | 'pop' | 'shift' | 'unshift' | 'splice' | 'sort' | 'reverse' | 'fill';
 
+const defaultCompare = function (a: any, b: any) {
+  a = String(a);
+  b = String(b);
+
+  if (a < b) {
+    return -1;
+  } else if (a > b) {
+    return 1;
+  } else {
+    return 0;
+  }
+};
+
 export const arrayOpers: Partial<Operations> = {
-  push: (arr, args, _commentsMap, _basePropPath) => {
+  push: (arr, args, _commentsMap, _path) => {
     // Does nothing since commentsMap's path is not changed.
     arr.push.apply(arr, args);
   },
@@ -26,28 +39,28 @@ export const arrayOpers: Partial<Operations> = {
     arr.pop();
   },
 
-  shift: (arr, _args, commentsMap, basePropPath) => {
+  shift: (arr, _args, commentsMap, path) => {
     const lastIndex = arr.length - 1;
     for (let i = 0; i < lastIndex; i++) {
-      commentsMap.move([...basePropPath, i + 1], [...basePropPath, i]);
+      commentsMap.move([...path, i + 1], [...path, i]);
     }
-    commentsMap.delete([...basePropPath, lastIndex]);
+    commentsMap.delete([...path, lastIndex]);
     arr.shift();
   },
 
-  unshift: (arr, args, commentsMap, basePropPath) => {
+  unshift: (arr, args, commentsMap, path) => {
     const delta = args.length;
     for (let i = arr.length - 1; i >= 0; i--) {
-      commentsMap.move([...basePropPath, i], [...basePropPath, i + delta]);
+      commentsMap.move([...path, i], [...path, i + delta]);
     }
 
     for (let i = 0; i < delta; i++) {
-      commentsMap.delete([...basePropPath, i]);
+      commentsMap.delete([...path, i]);
     }
     arr.unshift.apply(arr, args);
   },
 
-  splice: (arr, args, commentsMap, basePropPath) => {
+  splice: (arr, args, commentsMap, path) => {
     const start = args[0] as number;
     const deleteCount = (args[1] as number) || 0;
     const insertCount = Math.max(0, args.length - 2);
@@ -55,43 +68,33 @@ export const arrayOpers: Partial<Operations> = {
 
     // 1. Delete comments for removed elements
     for (let i = start; i < start + deleteCount; i++) {
-      commentsMap.delete([...basePropPath, i]);
+      commentsMap.delete([...path, i]);
     }
 
     // 2. Shift elements after the affected range
     if (netDelta > 0) {
       // Elements after the affected range need to move right (insert > delete)
       for (let i = arr.length - 1; i >= start + deleteCount; i--) {
-        commentsMap.move([...basePropPath, i], [...basePropPath, i + netDelta]);
+        commentsMap.move([...path, i], [...path, i + netDelta]);
       }
     } else if (netDelta < 0) {
       // Elements after the affected range need to move left (delete > insert)
       for (let i = start + deleteCount; i < arr.length; i++) {
-        commentsMap.move([...basePropPath, i], [...basePropPath, i + netDelta]);
+        commentsMap.move([...path, i], [...path, i + netDelta]);
       }
     }
     arr.splice.apply(arr, args);
   },
 
-  sort: (arr, _args, commentsMap, basePropPath) => {
-    for (let i = 0; i < arr.length; i++) {
-      commentsMap.delete([...basePropPath, i]);
-    }
+  sort: (arr, args, commentsMap, path) => {
+    const compare = args[0] || defaultCompare;
   },
 
-  reverse: (arr, _args, commentsMap, basePropPath) => {
+  reverse: (arr, _args, commentsMap, path) => {
     const len = arr.length;
     for (let i = 0; i < Math.floor(len / 2); i++) {
-      commentsMap.exchange([...basePropPath, i], [...basePropPath, len - 1 - i]);
+      commentsMap.exchange([...path, i], [...path, len - 1 - i]);
     }
-  },
-
-  fill: (arr, args, commentsMap, basePropPath) => {
-    const start = args[1] !== undefined ? (args[1] as number) : 0;
-    const end = args[2] !== undefined ? (args[2] as number) : arr.length;
-
-    for (let i = start; i < end; i++) {
-      commentsMap.delete([...basePropPath, i]);
-    }
+    arr.reverse();
   },
 };
