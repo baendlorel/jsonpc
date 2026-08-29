@@ -1,7 +1,7 @@
 import { ReflectDeep } from 'reflect-deep';
 import { isComment, aggregate, normalizeLines, stripTopBottom, stripPrefix, mark, visit, clone } from './core.js';
 import { PathMap } from './path-map.js';
-import { COMMENT_PREFIX } from './common.js';
+import { _isArray, COMMENT_PREFIX } from './common.js';
 
 export class JSONWithPropertyComment {
   private topComments: string[] = [];
@@ -102,7 +102,7 @@ export class JSONWithPropertyComment {
         return;
       }
 
-      if (Array.isArray(obj)) {
+      if (_isArray(obj)) {
         if (obj.length === 0) {
           lines.push(`${prefix}[]`);
           return;
@@ -110,11 +110,10 @@ export class JSONWithPropertyComment {
         lines.push(`${prefix}[`);
         for (let i = 0; i < obj.length; i++) {
           const val = typeof replacer === 'function' ? replacer.call(obj, String(i), obj[i]) : obj[i];
-          const isLast = i === obj.length - 1;
           serialize(val, depth + 1, path.concat(String(i)));
-          // if (!isLast) {
+
+          // * trailing comma for array elements
           lines[lines.length - 1] += ',';
-          // }
         }
         lines.push(`${prefix}]`);
         return;
@@ -154,12 +153,11 @@ export class JSONWithPropertyComment {
       lines.push(`${prefix}{`);
       for (let i = 0; i < active.length; i++) {
         const { key, val, propPath } = active[i];
-        const isLast = i === active.length - 1;
         const indent = ' '.repeat((depth + 1) * pad);
 
         // Emit comments before this property
         const comments = this.commentMap.get(propPath);
-        if (Array.isArray(comments)) {
+        if (_isArray(comments)) {
           for (const c of comments) {
             lines.push(`${indent}${COMMENT_PREFIX}${c}`);
           }
@@ -177,11 +175,9 @@ export class JSONWithPropertyComment {
           serialize(val, depth + 1, propPath);
         }
 
-        // Add trailing comma if not last
         // EPIC 添加trailing comma，但是在不用eval的情况下很困难
-        // if (!isLast) {
+        // * trailing comma for array elements
         lines[lines.length - 1] += ',';
-        // }
       }
       lines.push(`${prefix}}`);
     };

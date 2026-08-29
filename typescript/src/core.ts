@@ -166,7 +166,7 @@ export function visit(o: any, unames: Map<string, string>, path: string[] = [], 
       if (typeof v === 'object') {
         visit(v, unames, path.concat(key), map);
       }
-    } else if (Array.isArray(v)) {
+    } else if (_isArray(v)) {
       for (let i = 0; i < v.length; i++) {
         visit(v[i], unames, path.concat(key, i.toString()), map);
       }
