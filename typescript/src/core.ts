@@ -121,8 +121,50 @@ export function interpretName(line: string) {
 
 /**
  * Scan the whole text, and remove trailing commas.
+ *
+ * **This function is based on the concepts below:**
+ * 1. Trailing commas will only appear before `}` or `]`.
+ * 2. Trailing commas will not appear in string literals.
+ * 3. Comments satisfies the rules of JSONPC.
  */
-export function stripTrailingComma(text: string) {}
+export function stripTrailingCommas(text: string) {
+  const chars: (string | null)[] = [...text];
+  let inString = false;
+  let escape = false;
+
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
+
+    if (inString) {
+      if (escape) {
+        escape = false;
+      } else if (ch === '\\') {
+        escape = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (ch === '}' || ch === ']') {
+      let j = i - 1;
+      // ! chars[j] is definitely non-null for a valid json.
+      while (j >= 0 && /\s/.test(chars[j] as string)) {
+        j--;
+      }
+      if (j >= 0 && chars[j] === ',') {
+        chars[j] = null as any;
+      }
+    }
+  }
+
+  return chars.filter((c) => c !== null).join('');
+}
 
 export function uuidName(origin: string) {
   return (

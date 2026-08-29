@@ -1,4 +1,13 @@
-import { aggregate, mark, isComment, normalizeLines, stripTopBottom, visit, serialize } from '../src/core.js';
+import {
+  aggregate,
+  mark,
+  isComment,
+  normalizeLines,
+  stripTopBottom,
+  visit,
+  serialize,
+  stripTrailingCommas,
+} from '../src/core.js';
 import { JSONPC } from '../src/index.js';
 const text = `
 // Top comment 1
@@ -15,7 +24,7 @@ const text = `
   { 
       // comment for arr[0].item
       "item":22
-  }
+  },
   ],
 }
 
@@ -65,9 +74,10 @@ function main2() {
 }
 
 function main() {
-  const lines = normalizeLines(text);
+  const nontrailingcomma = stripTrailingCommas(text);
+  console.log('nontrailingcomma:', nontrailingcomma);
+  const lines = normalizeLines(nontrailingcomma);
   const withoutComments = lines.filter((v) => !isComment(v));
-  console.log(withoutComments);
   console.log('-'.repeat(50));
   try {
     JSON.parse(withoutComments.join('\n'));
