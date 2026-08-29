@@ -82,14 +82,28 @@ export class JSONPC {
     return this.commentMap.get(propPath.split('.'));
   }
 
+  /**
+   * Set value for a property path, creating the path if it does not exist.
+   * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
+   * @param value
+   */
   set(propPath: string, value: any): this {
     ReflectDeep.set(this.data, propPath.split('.'), value);
     return this;
   }
 
+  /**
+   * Get value for a property path, return `defaultValue` if the property path does not exist.
+   * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
+   * @param defaultValue the value to return if the property path does not exist
+   */
   get(propPath: string, defaultValue?: any) {
     const result = ReflectDeep.get(this.data, propPath.split('.'));
     return result === undefined ? defaultValue : result;
+  }
+
+  updateArray(propPath: string, functionName: string, args: any[]): this {
+    return this;
   }
 
   /**
