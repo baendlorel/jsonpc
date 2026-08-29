@@ -17,7 +17,7 @@ if (typeof COMMENT_PREFIX === 'undefined') {
   (globalThis as any).COMMENT_PREFIX = '// ';
 }
 
-export class JSONWithPropertyComment {
+export class JSONPC {
   private top: string[] = [];
   private bottom: string[] = [];
 
@@ -111,7 +111,7 @@ export class JSONWithPropertyComment {
    * - The internal data is already clean (uuid keys removed by visit),
    *   so this is a simple deep clone.
    */
-  toJSON<T = any>(): T {
+  toObject<T = any>(): T {
     return clone(this.data) as T;
   }
 
@@ -124,8 +124,32 @@ export class JSONWithPropertyComment {
     space?: string | number,
   ): string;
   stringifyWithoutComment(...args: any[]) {
-    return JSON.stringify(this.toJSON(), ...args);
+    return JSON.stringify(this.toObject(), ...args);
+  }
+
+  /**
+   * Release the references, clear internal containers.
+   */
+  destroy() {
+    this.top.length = 0;
+    this.bottom.length = 0;
+    this.commentMap.clear();
+
+    this.top = null as any;
+    this.bottom = null as any;
+    this.bottom = null as any;
+    this.data = null as any;
+    this.commentMap = null as any;
   }
 }
 
-export { JSONWithPropertyComment as JSONPC };
+/**
+ * Parse jsonpc text into an object.
+ * - Use `new JSONPC(text)` to create an operatable instance. You can set values/comments of any property path.
+ * @param text raw json text with property comments.
+ * @param reviver Same as the reviver in `JSON.parse`.
+ * @returns a pure js object, with all comments stripped.
+ */
+export function parse(text: string, reviver?: (this: any, key: string, value: any) => any): any {
+  return new JSONPC(text, reviver).toObject();
+}

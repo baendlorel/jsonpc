@@ -1,5 +1,5 @@
 import { aggregate, mark, isComment, normalizeLines, stripTopBottom, visit, serialize } from '../src/core.js';
-import { JSONWithPropertyComment } from '../src/index.js';
+import { JSONPC } from '../src/index.js';
 const text = `
 // Top comment 1
 // Top comment 2
@@ -52,7 +52,7 @@ function main() {
   console.log('map:', map);
 
   console.log('-'.repeat(50));
-  const j = new JSONWithPropertyComment(text);
+  const j = new JSONPC(text);
   // console.log(j.stringify(null, 2));
   // console.log('-'.repeat(50));
   // j.setComments('arr.0.item', ['New comment for arr[0].item']);

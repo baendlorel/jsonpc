@@ -1,3 +1,12 @@
+function clear(map: Map<any, any>) {
+  map.forEach((v) => {
+    if (v instanceof Map) {
+      clear(v);
+    }
+  });
+  map.clear();
+}
+
 /**
  * This is a Map that use an array of keys to map to a value.
  */
@@ -37,5 +46,9 @@ export class PathMap {
       cur = next;
     }
     cur.delete(keys[keys.length - 1]);
+  }
+
+  clear() {
+    clear(this.map);
   }
 }
