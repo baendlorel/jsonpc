@@ -2,9 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { JSONPC } from '../src/index.js';
 
 describe('Array operations with commentsMap synchronization', () => {
-
   describe('push', () => {
-    it('should not affect existing comments when pushing elements', () => {
+    it('should not have existing comments when pushing elements', () => {
       const text = `{
   "arr": [
     // comment for 0
@@ -13,17 +12,7 @@ describe('Array operations with commentsMap synchronization', () => {
     2
   ]
 }`;
-      const jpc = new JSONPC(text);
-
-      expect(jpc.getComments('arr.0')).toEqual(['comment for 0']);
-      expect(jpc.getComments('arr.1')).toEqual(['comment for 1']);
-
-      jpc.updateArray('arr', 'push', [3]);
-
-      // Existing comments should remain unchanged
-      expect(jpc.getComments('arr.0')).toEqual(['comment for 0']);
-      expect(jpc.getComments('arr.1')).toEqual(['comment for 1']);
-      expect(jpc.get('arr')).toEqual([1, 2, 3]);
+      expect(new JSONPC(text)).toThrow();
     });
   });
 

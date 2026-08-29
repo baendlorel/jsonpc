@@ -10,12 +10,12 @@ https://img.shields.io/npm/v/jsonpc-ts.svg)](https://www.npmjs.com/package/jsonp
 
 </div>
 
+
 ## Features
 
-✨ **Lightweight** — About 4KB.
-🎯 **Specific Positions** — Comments only allowed above property names, keeping it simple and clear.
-🔧 **Complete Operations** — Read/set comments and values, array operations supported.  
-➕ **Trailing Commas** — Trailing commas are supported.
+Support one line comments `//` and trailing comma in JSON files.
+
+See [Rules](#rules) for details.
 
 ## Installation
 
@@ -116,73 +116,47 @@ jsonpc follows these rules for comment support:
 
 ### Comment Syntax
 
-1. **Trailing commas supported** — Trailing commas in arrays and objects are allowed
-2. **Only `//` comments** — Only single-line comments starting with `//` are supported
-3. **Full-line comments** — Comments must occupy an entire line
-4. **Multi-line comments** — Multiple consecutive comment lines are allowed, but each must start with `//`
+1. Trailing commas in arrays and objects are allowed
+2. Only single-line comments starting with `//` are supported
+3. Comments must occupy an entire line
+4. Multiple consecutive comment lines are allowed, but each must start with `//`
 
 ### Valid Comment Positions
 
-Comments are **only** valid in these specific positions:
+Comments are **ONLY** valid in these specific positions:
 
 1. **File-level header** — At the very top of the file (before any JSON content)
-
 2. **File-level footer** — At the very bottom of the file (after all JSON content)
-
 3. **Above property names** — Directly above a property name in an object
-
-4. **Above array members** — Directly above array members:
-   - For **primitive types**: The comment represents that array element (`arr[i]`)
-   - For **objects**: Comments inside the object represent the property path comments
-   - For **top-level arrays**: The first item in the property path is `null` to distinguish from nested arrays
 
 ### Examples
 
 ```json
+// ✅ Valid: Top-level file comment
 {
   // ✅ Valid: Comment above property name
   "name": "Alice",
 
   // ✅ Valid: Comment above array element (primitive)
   "items": [
-    // First item
+    // ❌ Invalid: Comment not above a property
     1,
-    // Second item
     2,
   ],
 
   // ✅ Valid: Comment above object property in array
   "users": [
-    // User name
     {
+      // User name
       "name": "Bob"
     }
   ],
 
   /* ❌ Invalid: Block comments not supported */
   "key": "value",
-
   // ❌ Invalid: Comment not above a property
-  "key": "value"
-  // This comment is invalid
-
-  // ❌ Invalid: Comments in other positions will error
-  "nested": {
-    "inner": "value"
-  }
 }
-```
-
-### File-level Comments
-
-```ts
-// Top-level file with header and footer comments
-// Can have multiple lines
-{
-  "version": "1.0.0"
-}
-// Footer comment
-// Another footer line
+// ✅ Valid: Bottom-level file comment
 ```
 
 ## API
@@ -237,18 +211,6 @@ The `updateArray` method supports these array operations:
 - `sort` — Sort the array
 - `reverse` — Reverse the array
 
-## Design Philosophy
-
-jsonpc achieves lightweight comment support through clever transformation:
-
-1. **Preprocessing** — Extract comments and map them to property paths
-2. **Transformation** — Convert comments to temporary `_comment` properties
-3. **Parsing** — Parse using native `JSON.parse`
-4. **Cleanup** — Remove temporary properties, preserve comment mapping
-5. **Serialization** — Reinsert comment mappings into output
-
-This design avoids custom lexers, maintaining code simplicity and performance.
-
 ## Complete Example
 
 ```ts
@@ -284,7 +246,7 @@ config.set('port', 8080);
 config.updateArray('allowedDomains', 'push', ['api.example.com']);
 
 // 4. Update comments
-config.setComments('port', ['// Server port (updated)']);
+config.setComments('port', ['Server port (updated)']);
 
 // 5. Serialize and save
 console.log(config.stringify());
