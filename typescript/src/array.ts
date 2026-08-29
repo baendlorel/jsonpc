@@ -1,5 +1,7 @@
 import type { PathMap } from './path-map.js';
 import { quickSort } from './array-sort.js';
+import { ReflectDeep } from 'reflect-deep';
+import { _isArray } from './common.js';
 
 export type ArrayMethods = {
   [K in keyof Array<any>]: Array<any>[K] extends Function ? K : never;
@@ -14,75 +16,78 @@ type Operations = {
   ) => void;
 };
 
-export type SupportedArrayMethods = 'push' | 'pop' | 'shift' | 'unshift' | 'splice' | 'sort' | 'reverse' | 'fill';
+export type SupportedArrayMethods = 'push' | 'pop' | 'shift' | 'unshift' | 'splice' | 'sort' | 'reverse';
+
+export const getArray = (propPath: string, data: any) => {
+  const k = propPath.split('.');
+  const arr = ReflectDeep.get(data, k);
+  if (!_isArray(arr)) {
+    throw new TypeError(`The property path "${propPath}" is not an array.`);
+  }
+  return { k, arr };
+};
 
 export const _push: Operations['push'] = (arr, args) => arr.push.apply(arr, args);
 
-export const arrayOpers: Partial<Operations> = {
-  push: (arr, args, _commentsMap, _path) => {
-    // Does nothing since commentsMap's path is not changed.
-    arr.push.apply(arr, args);
-  },
+export const _pop: Operations['pop'] = (arr, _args, commentsMap, path) => {
+  commentsMap.delete([...path, arr.length - 1]);
+  arr.pop();
+};
 
-  pop: (arr, _args, commentsMap, propPath) => {
-    commentsMap.delete([...propPath, arr.length - 1]);
-    arr.pop();
-  },
+export const _shift: Operations['shift'] = (arr, _args, commentsMap, path) => {
+  const lastIndex = arr.length - 1;
+  for (let i = 0; i < lastIndex; i++) {
+    commentsMap.move([...path, i + 1], [...path, i]);
+  }
+  commentsMap.delete([...path, lastIndex]);
+  arr.shift();
+};
 
-  shift: (arr, _args, commentsMap, path) => {
-    const lastIndex = arr.length - 1;
-    for (let i = 0; i < lastIndex; i++) {
-      commentsMap.move([...path, i + 1], [...path, i]);
+export const _unshift: Operations['unshift'] = (arr, args, commentsMap, path) => {
+  const delta = args.length;
+  for (let i = arr.length - 1; i >= 0; i--) {
+    commentsMap.move([...path, i], [...path, i + delta]);
+  }
+
+  for (let i = 0; i < delta; i++) {
+    commentsMap.delete([...path, i]);
+  }
+  arr.unshift.apply(arr, args);
+};
+
+export const _splice: Operations['splice'] = (arr, args, commentsMap, path) => {
+  const start = args[0] as number;
+  const deleteCount = (args[1] as number) || 0;
+  const insertCount = Math.max(0, args.length - 2);
+  const netDelta = insertCount - deleteCount;
+
+  // 1. Delete comments for removed elements
+  for (let i = start; i < start + deleteCount; i++) {
+    commentsMap.delete([...path, i]);
+  }
+
+  // 2. Shift elements after the affected range
+  if (netDelta > 0) {
+    // Elements after the affected range need to move right (insert > delete)
+    for (let i = arr.length - 1; i >= start + deleteCount; i--) {
+      commentsMap.move([...path, i], [...path, i + netDelta]);
     }
-    commentsMap.delete([...path, lastIndex]);
-    arr.shift();
-  },
-
-  unshift: (arr, args, commentsMap, path) => {
-    const delta = args.length;
-    for (let i = arr.length - 1; i >= 0; i--) {
-      commentsMap.move([...path, i], [...path, i + delta]);
+  } else if (netDelta < 0) {
+    // Elements after the affected range need to move left (delete > insert)
+    for (let i = start + deleteCount; i < arr.length; i++) {
+      commentsMap.move([...path, i], [...path, i + netDelta]);
     }
+  }
+  arr.splice.apply(arr, args);
+};
 
-    for (let i = 0; i < delta; i++) {
-      commentsMap.delete([...path, i]);
-    }
-    arr.unshift.apply(arr, args);
-  },
+export const sort: Operations['sort'] = (arr, args, commentsMap, path) =>
+  quickSort(arr, 0, arr.length - 1, commentsMap, path, args[0]);
 
-  splice: (arr, args, commentsMap, path) => {
-    const start = args[0] as number;
-    const deleteCount = (args[1] as number) || 0;
-    const insertCount = Math.max(0, args.length - 2);
-    const netDelta = insertCount - deleteCount;
-
-    // 1. Delete comments for removed elements
-    for (let i = start; i < start + deleteCount; i++) {
-      commentsMap.delete([...path, i]);
-    }
-
-    // 2. Shift elements after the affected range
-    if (netDelta > 0) {
-      // Elements after the affected range need to move right (insert > delete)
-      for (let i = arr.length - 1; i >= start + deleteCount; i--) {
-        commentsMap.move([...path, i], [...path, i + netDelta]);
-      }
-    } else if (netDelta < 0) {
-      // Elements after the affected range need to move left (delete > insert)
-      for (let i = start + deleteCount; i < arr.length; i++) {
-        commentsMap.move([...path, i], [...path, i + netDelta]);
-      }
-    }
-    arr.splice.apply(arr, args);
-  },
-
-  sort: (arr, args, commentsMap, path) => quickSort(arr, 0, arr.length - 1, commentsMap, path, args[0]),
-
-  reverse: (arr, _args, commentsMap, path) => {
-    const len = arr.length;
-    for (let i = 0; i < Math.floor(len / 2); i++) {
-      commentsMap.exchange([...path, i], [...path, len - 1 - i]);
-    }
-    arr.reverse();
-  },
+export const reverse: Operations['reverse'] = (arr, _args, commentsMap, path) => {
+  const len = arr.length;
+  for (let i = 0; i < Math.floor(len / 2); i++) {
+    commentsMap.exchange([...path, i], [...path, len - 1 - i]);
+  }
+  arr.reverse();
 };

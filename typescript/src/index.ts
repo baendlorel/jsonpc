@@ -2,7 +2,7 @@ import { ReflectDeep } from 'reflect-deep';
 import { isComment, trim, stripTopBottom, aggregate, stripPrefix, mark, visit, clone, serialize } from './core.js';
 import { PathMap } from './path-map.js';
 import { _isArray } from './common.js';
-import { arrayOpers, SupportedArrayMethods } from './array.js';
+import { getArray, SupportedArrayMethods } from './array.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
   (globalThis as any).COMMENT_PREFIX = '//';
@@ -93,17 +93,16 @@ export class JSONPC {
     return result === undefined ? defaultValue : result;
   }
 
-  updateArray<Fn extends SupportedArrayMethods>(
-    propPath: string,
-    functionName: Fn,
-    args: Parameters<Array<any>[Fn]>,
-  ): this {
-    const k = propPath.split('.');
-    const arr = ReflectDeep.get(this.data, k);
-    if (!_isArray(arr)) {
-      throw new TypeError(`The property path "${propPath}" is not an array.`);
-    }
-    arrayOpers[functionName]?.(arr, args, this.commentMap, k);
+  /**
+   * Update an array property by calling a supported array method.
+   * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
+   * @param method Supported array method like `"push"`, `"pop"`, etc.
+   * @param args Arguments to pass to the array method
+   * @returns The instance itself for chaining
+   */
+  updateArray<Fn extends SupportedArrayMethods>(propPath: string, method: Fn, args: Parameters<Array<any>[Fn]>): this {
+    const { k, arr } = getArray(propPath, this.data);
+    arrayOpers[method](arr, args, this.commentMap, k);
     return this;
   }
 
