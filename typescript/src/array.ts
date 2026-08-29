@@ -61,12 +61,12 @@ export const splice: Operations['splice'] = (arr, args, commentsMap, path) => {
   const insertCount = Math.max(0, args.length - 2);
   const netDelta = insertCount - deleteCount;
 
-  // 1. Delete comments for removed elements
-  for (let i = start; i < start + deleteCount; i++) {
-    commentsMap.delete([...path, i]);
+  // 1. Delete comments for removed elements in the deletion range
+  for (let i = 0; i < deleteCount; i++) {
+    commentsMap.delete([...path, start + i]);
   }
 
-  // 2. Shift elements after the affected range
+  // 2. Shift elements AFTER the affected range (elements after start + deleteCount)
   if (netDelta > 0) {
     // Elements after the affected range need to move right (insert > delete)
     for (let i = arr.length - 1; i >= start + deleteCount; i--) {
@@ -78,6 +78,12 @@ export const splice: Operations['splice'] = (arr, args, commentsMap, path) => {
       commentsMap.move([...path, i], [...path, i + netDelta]);
     }
   }
+
+  // 3. Remove comments for newly inserted elements (they should be undefined)
+  for (let i = 0; i < insertCount; i++) {
+    commentsMap.delete([...path, start + i]);
+  }
+
   arr.splice.apply(arr, args);
 };
 

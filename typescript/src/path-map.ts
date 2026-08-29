@@ -18,10 +18,11 @@ export class PathMap {
   get<V = any>(keys: any[]): V | undefined {
     let cur = this.map;
     for (let i = 0; i < keys.length; i++) {
-      cur = cur.get(keys[i]);
-      if (cur instanceof Map === false) {
-        return i === keys.length - 1 ? (cur as V) : undefined;
+      const next = cur.get(keys[i]);
+      if (next === undefined) {
+        return undefined;
       }
+      cur = next;
     }
     return cur as V;
   }
@@ -67,11 +68,16 @@ export class PathMap {
       return;
     }
 
-    if (aValue !== undefined) {
-      this.set(bkeys, aValue);
-    }
+    // Delete both first to ensure clean state
+    this.delete(akeys);
+    this.delete(bkeys);
+
+    // Then set values that exist
     if (bValue !== undefined) {
       this.set(akeys, bValue);
+    }
+    if (aValue !== undefined) {
+      this.set(bkeys, aValue);
     }
   }
 

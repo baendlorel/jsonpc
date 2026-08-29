@@ -98,6 +98,7 @@ export function interpretName(line: string) {
   for (let i = 1; i < line.length; i++) {
     const c = line[i];
     if (escaping) {
+      chars.push(c); // Add the escaped character
       escaping = false;
       continue;
     }
