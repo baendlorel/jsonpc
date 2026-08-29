@@ -1,6 +1,5 @@
-import { ReflectDeep } from 'reflect-deep';
 import { isComment, trim, stripTopBottom, aggregate, stripPrefix, mark, visit, clone, serialize } from './core.js';
-import { _isArray } from './common.js';
+import { _isArray, _get, _set } from './common.js';
 import { arrayOpers, getArray, SupportedArrayMethods } from './array.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
@@ -59,7 +58,7 @@ export class JSONPC {
     if (!_isArray(comments)) {
       throw new TypeError(`Invalid comments argument, must be an array of strings or a function.`);
     }
-    ReflectDeep.set(this.commentMap, propPath.split('.'), comments);
+    _set(this.commentMap, propPath.split('.'), comments);
     return this;
   }
 
@@ -70,7 +69,7 @@ export class JSONPC {
    * @returns comment content lines (without `//` prefix), or `undefined`
    */
   getComments(propPath: string): string[] | undefined {
-    return ReflectDeep.get(this.commentMap, propPath.split('.'));
+    return _get(this.commentMap, propPath.split('.'));
   }
 
   /**
@@ -79,7 +78,7 @@ export class JSONPC {
    * @param value
    */
   set(propPath: string, value: any): this {
-    ReflectDeep.set(this.data, propPath.split('.'), value);
+    _set(this.data, propPath.split('.'), value);
     return this;
   }
 
@@ -89,7 +88,7 @@ export class JSONPC {
    * @param defaultValue the value to return if the property path does not exist
    */
   get(propPath: string, defaultValue?: any) {
-    const result = ReflectDeep.get(this.data, propPath.split('.'));
+    const result = _get(this.data, propPath.split('.'));
     return result === undefined ? defaultValue : result;
   }
 

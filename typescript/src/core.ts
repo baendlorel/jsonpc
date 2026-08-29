@@ -1,5 +1,4 @@
-import { ReflectDeep } from 'reflect-deep';
-import { _isArray, _keys } from './common.js';
+import { _get, _isArray, _keys, _set } from './common.js';
 
 export function isComment(t: string) {
   return t.startsWith(COMMENT_PREFIX);
@@ -205,14 +204,10 @@ export function mark(aggregated: Array<string | string[]>) {
  * Deep visit, collect prop path.
  * @param o the parsed object
  * @param unames uname -> original name map
- * @param path property name path for ReflectDeep
+ * @param path property name path
  * @param commentMap returned map
  */
 export function visit(o: any, unames: Map<string, string>, path: string[] = [], commentMap: any = {}) {
-  // 1、区分数组还是对象
-  // 2、如果找到符合unames的再处理；
-  // 3、没找到就进一步遍历。
-
   for (const k in o) {
     const origin = unames.get(k);
     const v = o[k];
@@ -222,14 +217,14 @@ export function visit(o: any, unames: Map<string, string>, path: string[] = [], 
       // Store the comments outside the object.
       delete o[k];
       const nextPath = path.concat(origin);
-      ReflectDeep.set(commentMap, nextPath, v);
+      _set(commentMap, nextPath, v);
       if (typeof v === 'object') {
         visit(v, unames, nextPath, commentMap);
       }
     } else if (_isArray(v)) {
       const arr: any[] = [];
       const nextPath = path.concat(k);
-      ReflectDeep.set(commentMap, nextPath, arr);
+      _set(commentMap, nextPath, arr);
       for (let i = 0; i < v.length; i++) {
         visit(v[i], unames, nextPath.concat(String(i)), commentMap);
       }
@@ -362,7 +357,7 @@ export function serialize(
     const indent = ' '.repeat((depth + 1) * pad);
 
     // Emit comments before this property
-    const comments = ReflectDeep.get(commentMap, propPath);
+    const comments = _get(commentMap, propPath);
     if (_isArray(comments)) {
       for (let i = 0; i < comments.length; i++) {
         lines.push(`${indent}${COMMENT_PREFIX} ${comments[i]}`);
