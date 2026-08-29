@@ -16,12 +16,12 @@ const text = `
       // comment for arr[0].item
       "item":22
   }
-  ]
+  ],
 }
 
 // Bottom comment
 `;
-function main() {
+function main2() {
   const lines = normalizeLines(text);
   const withoutComments = lines.filter((v) => !isComment(v));
   const rawJson = withoutComments.join('');
@@ -62,5 +62,17 @@ function main() {
   // @ts-expect-error
   console.log(serialize(j.commentMap, j.data, 2, null));
   console.log(j.stringify(null, 2));
+}
+
+function main() {
+  const lines = normalizeLines(text);
+  const withoutComments = lines.filter((v) => !isComment(v));
+  console.log(withoutComments);
+  console.log('-'.repeat(50));
+  try {
+    JSON.parse(withoutComments.join('\n'));
+  } catch (e) {
+    console.log((e as any).message);
+  }
 }
 main();

@@ -77,6 +77,10 @@ function nextNonSpaceIsColon(line: string, start: number) {
   return false;
 }
 
+/**
+ * & Since comments are only allowed to appear above property names.
+ * & It's guaranteed that the next line is a property name line starts with '"'.
+ */
 export function interpretName(line: string) {
   if (line[0] !== '"') {
     throw new Error(`Comments are only allowed directly above property names`);
@@ -114,6 +118,11 @@ export function interpretName(line: string) {
 
   return chars.join('');
 }
+
+/**
+ * Scan the whole text, and remove trailing commas.
+ */
+export function stripTrailingComma(text: string) {}
 
 export function uuidName(origin: string) {
   return (
