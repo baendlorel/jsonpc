@@ -112,9 +112,9 @@ export class JSONWithPropertyComment {
           const val = typeof replacer === 'function' ? replacer.call(obj, String(i), obj[i]) : obj[i];
           const isLast = i === obj.length - 1;
           serialize(val, depth + 1, path.concat(String(i)));
-          if (!isLast) {
-            lines[lines.length - 1] += ',';
-          }
+          // if (!isLast) {
+          lines[lines.length - 1] += ',';
+          // }
         }
         lines.push(`${prefix}]`);
         return;
@@ -179,9 +179,9 @@ export class JSONWithPropertyComment {
 
         // Add trailing comma if not last
         // EPIC 添加trailing comma，但是在不用eval的情况下很困难
-        if (!isLast) {
-          lines[lines.length - 1] += ',';
-        }
+        // if (!isLast) {
+        lines[lines.length - 1] += ',';
+        // }
       }
       lines.push(`${prefix}}`);
     };
