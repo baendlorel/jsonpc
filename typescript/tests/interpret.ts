@@ -57,5 +57,8 @@ function main() {
   console.log('-'.repeat(50));
   j.setComments('arr.0.item', ['New comment for arr[0].item']);
   console.log(j.stringify(null, 2));
+  console.log('-'.repeat(50));
+  j.set('asdfasdlf.sdfs.asdf', 23);
+  console.log(j.stringify(null, 2));
 }
 main();

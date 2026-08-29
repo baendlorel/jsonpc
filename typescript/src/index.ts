@@ -1,5 +1,15 @@
 import { ReflectDeep } from 'reflect-deep';
-import { isComment, aggregate, normalizeLines, stripTopBottom, stripPrefix, mark, visit, clone } from './core.js';
+import {
+  isComment,
+  aggregate,
+  normalizeLines,
+  stripTopBottom,
+  stripPrefix,
+  mark,
+  visit,
+  clone,
+  serialize,
+} from './core.js';
 import { PathMap } from './path-map.js';
 import { _isArray, COMMENT_PREFIX } from './common.js';
 
@@ -85,116 +95,11 @@ export class JSONWithPropertyComment {
     replacer?: ((this: any, key: string, value: any) => any) | (number | string)[] | null,
     space?: number,
   ): string {
-    const pad = space ?? 2;
-    replacer ??= null;
+    const top = this.top.map((v) => `${COMMENT_PREFIX}${v}`);
+    const lines = serialize(this.commentMap, this.data, space ?? 2, replacer ?? null);
+    const bottom = this.bottom.map((v) => `${COMMENT_PREFIX}${v}`);
 
-    const lines: string[] = [];
-
-    /**
-     * Serialize a value, appending lines to `lines`.
-     * @param path current property path (string[]) for comment lookup
-     */
-    const serialize = (obj: any, depth: number, path: string[] = []): void => {
-      const prefix = ' '.repeat(depth * pad);
-
-      if (obj === null || typeof obj !== 'object') {
-        lines.push(`${prefix}${JSON.stringify(obj, replacer as any, pad)}`);
-        return;
-      }
-
-      if (_isArray(obj)) {
-        if (obj.length === 0) {
-          lines.push(`${prefix}[]`);
-          return;
-        }
-        lines.push(`${prefix}[`);
-        for (let i = 0; i < obj.length; i++) {
-          const val = typeof replacer === 'function' ? replacer.call(obj, String(i), obj[i]) : obj[i];
-          serialize(val, depth + 1, path.concat(String(i)));
-
-          // * trailing comma for array elements
-          lines[lines.length - 1] += ',';
-        }
-        lines.push(`${prefix}]`);
-        return;
-      }
-
-      // Plain object
-      const keys = Object.keys(obj);
-      if (keys.length === 0) {
-        lines.push(`${prefix}{}`);
-        return;
-      }
-
-      // Collect entries with their values resolved through replacer
-      interface Entry {
-        key: string;
-        val: any;
-        skipped: boolean;
-        propPath: string[];
-      }
-      const entries: Entry[] = keys.map((key) => {
-        const val = typeof replacer === 'function' ? replacer.call(obj, key, obj[key]) : obj[key];
-        return {
-          key,
-          val,
-          skipped: val === undefined,
-          propPath: path.concat(key),
-        };
-      });
-
-      const active = entries.filter((e) => !e.skipped);
-
-      if (active.length === 0) {
-        lines.push(`${prefix}{}`);
-        return;
-      }
-
-      lines.push(`${prefix}{`);
-      for (let i = 0; i < active.length; i++) {
-        const { key, val, propPath } = active[i];
-        const indent = ' '.repeat((depth + 1) * pad);
-
-        // Emit comments before this property
-        const comments = this.commentMap.get(propPath);
-        if (_isArray(comments)) {
-          for (let i = 0; i < comments.length; i++) {
-            lines.push(`${indent}${COMMENT_PREFIX}${comments[i]}`);
-          }
-        }
-
-        // Emit the property key
-        const keyLine = `${indent}"${key}":`;
-        lines.push(keyLine);
-
-        // Serialize the value — for primitives, inline on the same line
-        const isObj = val !== null && typeof val === 'object';
-        if (!isObj) {
-          lines[lines.length - 1] += JSON.stringify(val, replacer as any, pad);
-        } else {
-          serialize(val, depth + 1, propPath);
-        }
-
-        // EPIC 添加trailing comma，但是在不用eval的情况下很困难
-        // * trailing comma for array elements
-        lines[lines.length - 1] += ',';
-      }
-      lines.push(`${prefix}}`);
-    };
-
-    // Top-level file comments
-    for (let i = 0; i < this.top.length; i++) {
-      lines.push(`${COMMENT_PREFIX}${this.top[i]}`);
-    }
-
-    serialize(this.data, 0);
-
-    // Bottom-level file comments
-    for (let i = 0; i < this.bottom.length; i++) {
-      lines.push(`${COMMENT_PREFIX}${this.bottom[i]}`);
-    }
-
-    return lines.join('\n');
+    return top.concat(lines, bottom).join('\n');
   }
 
   /**

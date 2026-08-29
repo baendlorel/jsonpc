@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { PathMap } from './path-map.js';
-import { _isArray } from './common.js';
+import { _isArray, COMMENT_PREFIX } from './common.js';
 
 export function isComment(t: string) {
   return t.startsWith('//');
@@ -194,3 +194,104 @@ export const clone: <T = any>(o: T) => T =
     }
     return result as T;
   };
+
+/**
+ * Serialize a value, appending lines to `lines`.
+ * @param path current property path (string[]) for comment lookup
+ */
+export function serialize(
+  commentMap: PathMap,
+  obj: any,
+  pad: number,
+  replacer: ((this: any, key: string, value: any) => any) | (number | string)[] | null,
+  depth: number = 0,
+  path: string[] = [],
+  lines: string[] = [],
+): string[] {
+  const prefix = ' '.repeat(depth * pad);
+
+  if (obj === null || typeof obj !== 'object') {
+    lines.push(`${prefix}${JSON.stringify(obj, null, pad)}`);
+    return lines;
+  }
+
+  if (_isArray(obj)) {
+    if (obj.length === 0) {
+      lines.push(`${prefix}[]`);
+      return lines;
+    }
+    lines.push(`${prefix}[`);
+    for (let i = 0; i < obj.length; i++) {
+      const val = typeof replacer === 'function' ? replacer.call(obj, String(i), obj[i]) : obj[i];
+      serialize(commentMap, val, pad, replacer, depth + 1, path.concat(String(i)), lines);
+
+      // * trailing comma for array elements
+      lines[lines.length - 1] += ',';
+    }
+    lines.push(`${prefix}]`);
+    return lines;
+  }
+
+  // Plain object
+  const keys = Object.keys(obj);
+  if (keys.length === 0) {
+    lines.push(`${prefix}{}`);
+    return lines;
+  }
+
+  // Collect entries with their values resolved through replacer
+  interface Entry {
+    key: string;
+    val: any;
+    skipped: boolean;
+    propPath: string[];
+  }
+  const entries: Entry[] = keys.map((key) => {
+    const val = typeof replacer === 'function' ? replacer.call(obj, key, obj[key]) : obj[key];
+    return {
+      key,
+      val,
+      skipped: val === undefined,
+      propPath: path.concat(key),
+    };
+  });
+
+  const active = entries.filter((e) => !e.skipped);
+
+  if (active.length === 0) {
+    lines.push(`${prefix}{}`);
+    return lines;
+  }
+
+  lines.push(`${prefix}{`);
+  for (let i = 0; i < active.length; i++) {
+    const { key, val, propPath } = active[i];
+    const indent = ' '.repeat((depth + 1) * pad);
+
+    // Emit comments before this property
+    const comments = commentMap.get(propPath);
+    if (_isArray(comments)) {
+      for (let i = 0; i < comments.length; i++) {
+        lines.push(`${indent}${COMMENT_PREFIX}${comments[i]}`);
+      }
+    }
+
+    // Emit the property key
+    const keyLine = `${indent}"${key}":`;
+    lines.push(keyLine);
+
+    // Serialize the value — for primitives, inline on the same line
+    const isObj = val !== null && typeof val === 'object';
+    if (!isObj) {
+      lines[lines.length - 1] += JSON.stringify(val, replacer as any, pad);
+    } else {
+      serialize(commentMap, val, pad, replacer, depth + 1, propPath, lines);
+    }
+
+    // EPIC 添加trailing comma，但是在不用eval的情况下很困难
+    // * trailing comma for array elements
+    lines[lines.length - 1] += ',';
+  }
+  lines.push(`${prefix}}`);
+  return lines;
+}
