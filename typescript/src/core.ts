@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { PathMap } from './path-map.js';
-import { _isArray, COMMENT_PREFIX } from './common.js';
+import { _isArray, _keys, COMMENT_PREFIX } from './common.js';
 
 export function isComment(t: string) {
   return t.startsWith('//');
@@ -217,10 +217,19 @@ export function serialize(
 
   if (_isArray(obj)) {
     if (obj.length === 0) {
-      lines.push(`${prefix}[]`);
+      lines[lines.length - 1] += `[]`;
       return lines;
     }
-    lines.push(`${prefix}[`);
+
+    /**
+     * @see same logic about '{' below.
+     */
+    if (lines.length === 0 || lines[lines.length - 1].endsWith('[')) {
+      lines.push(`${prefix}[`);
+    } else {
+      lines[lines.length - 1] += `[`;
+    }
+
     for (let i = 0; i < obj.length; i++) {
       const val = typeof replacer === 'function' ? replacer.call(obj, String(i), obj[i]) : obj[i];
       serialize(commentMap, val, pad, replacer, depth + 1, path.concat(String(i)), lines);
@@ -233,7 +242,7 @@ export function serialize(
   }
 
   // Plain object
-  const keys = Object.keys(obj);
+  const keys = _keys(obj);
   if (keys.length === 0) {
     lines.push(`${prefix}{}`);
     return lines;
@@ -259,11 +268,32 @@ export function serialize(
   const active = entries.filter((e) => !e.skipped);
 
   if (active.length === 0) {
-    lines.push(`${prefix}{}`);
+    lines[lines.length - 1] += `{}`;
     return lines;
   }
 
-  lines.push(`${prefix}{`);
+  /**
+   * This makes:
+   * ```js
+   * {
+   *  "ddd": {
+   *  }
+   * }
+   * ```
+   * instead of:
+   * ```js
+   * {
+   *   "ddd":
+   *   {
+   *   }
+   * }
+   */
+  if (lines.length === 0 || lines[lines.length - 1].endsWith('[')) {
+    lines.push(`${prefix}{`);
+  } else {
+    lines[lines.length - 1] += `{`;
+  }
+
   for (let i = 0; i < active.length; i++) {
     const { key, val, propPath } = active[i];
     const indent = ' '.repeat((depth + 1) * pad);
@@ -277,7 +307,7 @@ export function serialize(
     }
 
     // Emit the property key
-    const keyLine = `${indent}"${key}":`;
+    const keyLine = `${indent}"${key}": `;
     lines.push(keyLine);
 
     // Serialize the value — for primitives, inline on the same line

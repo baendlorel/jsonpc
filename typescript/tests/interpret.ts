@@ -1,4 +1,4 @@
-import { aggregate, mark, isComment, normalizeLines, stripTopBottom, visit } from '../src/core.js';
+import { aggregate, mark, isComment, normalizeLines, stripTopBottom, visit, serialize } from '../src/core.js';
 import { JSONWithPropertyComment } from '../src/index.js';
 const text = `
 // Top comment 1
@@ -53,12 +53,14 @@ function main() {
 
   console.log('-'.repeat(50));
   const j = new JSONWithPropertyComment(text);
-  console.log(j.stringify(null, 2));
+  // console.log(j.stringify(null, 2));
+  // console.log('-'.repeat(50));
+  // j.setComments('arr.0.item', ['New comment for arr[0].item']);
+  // console.log(j.stringify(null, 2));
   console.log('-'.repeat(50));
-  j.setComments('arr.0.item', ['New comment for arr[0].item']);
-  console.log(j.stringify(null, 2));
-  console.log('-'.repeat(50));
-  j.set('asdfasdlf.sdfs.asdf', 23);
+  j.set('asdfasdlf', false);
+  // @ts-expect-error
+  console.log(serialize(j.commentMap, j.data, 2, null));
   console.log(j.stringify(null, 2));
 }
 main();
