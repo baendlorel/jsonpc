@@ -11,7 +11,11 @@ import {
   serialize,
 } from './core.js';
 import { PathMap } from './path-map.js';
-import { _isArray, COMMENT_PREFIX } from './common.js';
+import { _isArray } from './common.js';
+
+if (typeof COMMENT_PREFIX === 'undefined') {
+  (globalThis as any).COMMENT_PREFIX = '// ';
+}
 
 export class JSONWithPropertyComment {
   private top: string[] = [];

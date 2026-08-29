@@ -1,3 +1,4 @@
+import replace from '@rollup/plugin-replace';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig(() => {
@@ -10,5 +11,16 @@ export default defineConfig(() => {
     resolve: {
       alias: {},
     },
+    plugins: [
+      (replace as unknown as typeof replace.default)({
+        preventAssignment: true,
+        delimiter: ['', ''],
+        values: {
+          __IS_DEV__: 'true',
+          COMMENT_PREFIX: "'// '",
+          '${COMMENT_PREFIX}': '// ',
+        },
+      }),
+    ],
   };
 });

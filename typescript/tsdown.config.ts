@@ -15,7 +15,7 @@ export default defineConfig({
   target: 'node16',
   treeshake: !isDev,
   plugins: [
-    replace.default({
+    (replace as unknown as typeof replace.default)({
       preventAssignment: true,
       delimiter: ['', ''],
       values: {
