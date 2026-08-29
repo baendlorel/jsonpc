@@ -1,4 +1,4 @@
-import type { PathMap } from './path-map.js';
+import { _exchange } from './common.js';
 
 const defaultCompare = function (a: any, b: any) {
   a = String(a);
@@ -13,21 +13,21 @@ const defaultCompare = function (a: any, b: any) {
   }
 };
 
-function swap(arr: any[], i: number, j: number, commentsMap: PathMap, path: string[]) {
+function swap(arr: any[], i: number, j: number, commentsMap: any, path: string[]) {
   if (i === j) {
     return;
   }
   const tmp = arr[i];
   arr[i] = arr[j];
   arr[j] = tmp;
-  commentsMap.exchange([...path, i], [...path, j]);
+  _exchange(commentsMap, [...path, i], [...path, j]);
 }
 
 export function quickSort(
   arr: any[],
   left: number,
   right: number,
-  commentsMap: PathMap,
+  commentsMap: any,
   path: string[],
   compare: (a: any, b: any) => number = defaultCompare,
 ) {

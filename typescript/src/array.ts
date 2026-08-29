@@ -24,7 +24,7 @@ export const getArray = (propPath: string, data: any) => {
 export const push: Operations['push'] = (arr, args) => arr.push.apply(arr, args);
 
 export const pop: Operations['pop'] = (arr, _args, commentsMap, path) => {
-  commentsMap.delete([...path, arr.length - 1]);
+  _delete(commentsMap, [...path, arr.length - 1]);
   arr.pop();
 };
 
@@ -44,7 +44,7 @@ export const unshift: Operations['unshift'] = (arr, args, commentsMap, path) => 
   }
 
   for (let i = 0; i < delta; i++) {
-    commentsMap.delete([...path, i]);
+    _delete(commentsMap, [...path, i]);
   }
   arr.unshift.apply(arr, args);
 };
@@ -57,7 +57,7 @@ export const splice: Operations['splice'] = (arr, args, commentsMap, path) => {
 
   // 1. Delete comments for removed elements in the deletion range
   for (let i = 0; i < deleteCount; i++) {
-    commentsMap.delete([...path, start + i]);
+    _delete(commentsMap, [...path, start + i]);
   }
 
   // 2. Shift elements AFTER the affected range (elements after start + deleteCount)
@@ -75,7 +75,7 @@ export const splice: Operations['splice'] = (arr, args, commentsMap, path) => {
 
   // 3. Remove comments for newly inserted elements (they should be undefined)
   for (let i = 0; i < insertCount; i++) {
-    commentsMap.delete([...path, start + i]);
+    _delete(commentsMap, [...path, start + i]);
   }
 
   arr.splice.apply(arr, args);
