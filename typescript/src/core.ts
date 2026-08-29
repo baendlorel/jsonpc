@@ -2,7 +2,7 @@ import { PathMap } from './path-map.js';
 import { _isArray, _keys } from './common.js';
 
 export function isComment(t: string) {
-  return t.startsWith('//');
+  return t.startsWith(COMMENT_PREFIX_TRIMMED);
 }
 
 export function validComments(comments: any): comments is string[] {
@@ -10,10 +10,10 @@ export function validComments(comments: any): comments is string[] {
 }
 
 export function stripPrefix(t: string): string {
-  return t.replace(/^\/\/\s?/, '');
+  return t.replace(COMMENT_PREFIX_TRIMMED, '').trim();
 }
 
-export function normalizeLines(text: string) {
+export function trim(text: string) {
   return text
     .split(/(\r\n|\r|\n)/)
     .map((t) => t.trim())
@@ -357,7 +357,7 @@ export function serialize(
     const comments = commentMap.get(propPath);
     if (_isArray(comments)) {
       for (let i = 0; i < comments.length; i++) {
-        lines.push(`${indent}${COMMENT_PREFIX}${comments[i]}`);
+        lines.push(`${indent}${COMMENT_PREFIX_TRIMMED} ${comments[i]}`);
       }
     }
 

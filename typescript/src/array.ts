@@ -1,15 +1,11 @@
 import type { PathMap } from './path-map.js';
 
-export type ArrayFunctions = {
+export type ArrayMethods = {
   [K in keyof Array<any>]: Array<any>[K] extends Function ? K : never;
 };
 
-export type ArrayOperationArgs<K extends keyof Array<any>> = K extends keyof ArrayFunctions
-  ? Parameters<Array<any>[K]>
-  : never;
-
 type Operations = {
-  [K in keyof ArrayFunctions]: (
+  [K in keyof ArrayMethods]: (
     arr: any[],
     args: Parameters<Array<any>[K]>,
     commentsMap: PathMap,
@@ -17,13 +13,17 @@ type Operations = {
   ) => void;
 };
 
+export type SupportedArrayMethods = 'push' | 'pop' | 'shift' | 'unshift' | 'splice' | 'sort' | 'reverse' | 'fill';
+
 export const arrayOpers: Partial<Operations> = {
-  push: (_arr, _args, _commentsMap, _basePropPath) => {
+  push: (arr, args, _commentsMap, _basePropPath) => {
     // Does nothing since commentsMap's path is not changed.
+    arr.push.apply(arr, args);
   },
 
   pop: (arr, _args, commentsMap, propPath) => {
     commentsMap.delete([...propPath, arr.length - 1]);
+    arr.pop();
   },
 
   shift: (arr, _args, commentsMap, basePropPath) => {
@@ -32,6 +32,7 @@ export const arrayOpers: Partial<Operations> = {
       commentsMap.move([...basePropPath, i + 1], [...basePropPath, i]);
     }
     commentsMap.delete([...basePropPath, lastIndex]);
+    arr.shift();
   },
 
   unshift: (arr, args, commentsMap, basePropPath) => {
@@ -43,6 +44,7 @@ export const arrayOpers: Partial<Operations> = {
     for (let i = 0; i < delta; i++) {
       commentsMap.delete([...basePropPath, i]);
     }
+    arr.unshift.apply(arr, args);
   },
 
   splice: (arr, args, commentsMap, basePropPath) => {
@@ -68,6 +70,7 @@ export const arrayOpers: Partial<Operations> = {
         commentsMap.move([...basePropPath, i], [...basePropPath, i + netDelta]);
       }
     }
+    arr.splice.apply(arr, args);
   },
 
   sort: (arr, _args, commentsMap, basePropPath) => {
@@ -79,10 +82,7 @@ export const arrayOpers: Partial<Operations> = {
   reverse: (arr, _args, commentsMap, basePropPath) => {
     const len = arr.length;
     for (let i = 0; i < Math.floor(len / 2); i++) {
-      commentsMap.exchange(
-        [...basePropPath, i],
-        [...basePropPath, len - 1 - i],
-      );
+      commentsMap.exchange([...basePropPath, i], [...basePropPath, len - 1 - i]);
     }
   },
 

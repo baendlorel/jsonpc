@@ -1,21 +1,14 @@
 import { ReflectDeep } from 'reflect-deep';
-import {
-  isComment,
-  aggregate,
-  normalizeLines,
-  stripTopBottom,
-  stripPrefix,
-  mark,
-  visit,
-  clone,
-  serialize,
-} from './core.js';
+import { isComment, trim, stripTopBottom, aggregate, stripPrefix, mark, visit, clone, serialize } from './core.js';
 import { PathMap } from './path-map.js';
 import { _isArray } from './common.js';
-import { type ArrayFunctions, type ArrayOperationArgs, arrayOpers } from './array.js';
+import { arrayOpers, SupportedArrayMethods } from './array.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
   (globalThis as any).COMMENT_PREFIX = '// ';
+}
+if (typeof COMMENT_PREFIX_TRIMMED === 'undefined') {
+  (globalThis as any).COMMENT_PREFIX_TRIMMED = '//';
 }
 
 export class JSONPC {
@@ -33,7 +26,7 @@ export class JSONPC {
    * @param reviver A function that transforms the results. This function is called for each member of the object.
    */
   constructor(text: string, reviver?: (this: any, key: string, value: any) => any) {
-    const lines = normalizeLines(text);
+    const lines = trim(text);
     const withoutComments = lines.filter((v) => !isComment(v));
     const rawJson = withoutComments.join('');
     try {
@@ -103,19 +96,17 @@ export class JSONPC {
     return result === undefined ? defaultValue : result;
   }
 
-  updateArray<Fn extends keyof ArrayFunctions>(propPath: string, functionName: Fn, args: ArrayOperationArgs<Fn>): this {
+  updateArray<Fn extends SupportedArrayMethods>(
+    propPath: string,
+    functionName: Fn,
+    args: Parameters<Array<any>[Fn]>,
+  ): this {
     const k = propPath.split('.');
     const arr = ReflectDeep.get(this.data, k);
     if (!_isArray(arr)) {
       throw new TypeError(`The property path "${propPath}" is not an array.`);
     }
-
-    // First, sync the commentsMap by calling the corresponding array operation handler
     arrayOpers[functionName]?.(arr, args, this.commentMap, k);
-
-    // Then, perform the actual array operation
-    arr[functionName](...args);
-
     return this;
   }
 
@@ -131,9 +122,9 @@ export class JSONPC {
     replacer?: ((this: any, key: string, value: any) => any) | (number | string)[] | null,
     space?: number,
   ): string {
-    const top = this.top.map((v) => `${COMMENT_PREFIX}${v}`);
+    const top = this.top.map((v) => `${COMMENT_PREFIX_TRIMMED} ${v}`);
     const lines = serialize(this.commentMap, this.data, space ?? 2, replacer ?? null);
-    const bottom = this.bottom.map((v) => `${COMMENT_PREFIX}${v}`);
+    const bottom = this.bottom.map((v) => `${COMMENT_PREFIX_TRIMMED} ${v}`);
 
     return top.concat(lines, bottom).join('\n');
   }
