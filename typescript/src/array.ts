@@ -16,6 +16,8 @@ type Operations = {
 
 export type SupportedArrayMethods = 'push' | 'pop' | 'shift' | 'unshift' | 'splice' | 'sort' | 'reverse' | 'fill';
 
+export const _push: Operations['push'] = (arr, args) => arr.push.apply(arr, args);
+
 export const arrayOpers: Partial<Operations> = {
   push: (arr, args, _commentsMap, _path) => {
     // Does nothing since commentsMap's path is not changed.
