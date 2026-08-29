@@ -17,10 +17,8 @@ export default defineConfig(() => {
         delimiter: ['', ''],
         values: {
           __IS_DEV__: 'true',
-          COMMENT_PREFIX: "'// '",
-          '${COMMENT_PREFIX}': '// ',
-          COMMENT_PREFIX_TRIMMED: "'//'",
-          '${COMMENT_PREFIX_TRIMMED}': '//',
+          COMMENT_PREFIX: "'//'",
+          '${COMMENT_PREFIX}': '//',
         },
       }),
     ],

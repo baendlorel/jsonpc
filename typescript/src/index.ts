@@ -5,10 +5,7 @@ import { _isArray } from './common.js';
 import { arrayOpers, SupportedArrayMethods } from './array.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
-  (globalThis as any).COMMENT_PREFIX = '// ';
-}
-if (typeof COMMENT_PREFIX_TRIMMED === 'undefined') {
-  (globalThis as any).COMMENT_PREFIX_TRIMMED = '//';
+  (globalThis as any).COMMENT_PREFIX = '//';
 }
 
 export class JSONPC {
@@ -122,9 +119,9 @@ export class JSONPC {
     replacer?: ((this: any, key: string, value: any) => any) | (number | string)[] | null,
     space?: number,
   ): string {
-    const top = this.top.map((v) => `${COMMENT_PREFIX_TRIMMED} ${v}`);
+    const top = this.top.map((v) => `${COMMENT_PREFIX} ${v}`);
     const lines = serialize(this.commentMap, this.data, space ?? 2, replacer ?? null);
-    const bottom = this.bottom.map((v) => `${COMMENT_PREFIX_TRIMMED} ${v}`);
+    const bottom = this.bottom.map((v) => `${COMMENT_PREFIX} ${v}`);
 
     return top.concat(lines, bottom).join('\n');
   }
