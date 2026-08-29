@@ -4,8 +4,8 @@ import { PathMap } from './path-map.js';
 import { _isArray, COMMENT_PREFIX } from './common.js';
 
 export class JSONWithPropertyComment {
-  private topComments: string[] = [];
-  private bottomComments: string[] = [];
+  private top: string[] = [];
+  private bottom: string[] = [];
 
   /** Maps property path (string[]) → comment content lines (string[], without `//` prefix) */
   private commentMap: PathMap = new PathMap();
@@ -32,10 +32,10 @@ export class JSONWithPropertyComment {
     // Fill the whole file level comments
     const stripIndex = stripTopBottom(lines);
     if (!Number.isNaN(stripIndex.bottom)) {
-      this.bottomComments = lines.splice(stripIndex.bottom).map(stripPrefix); //! Must be done first, or indexes will change.
+      this.bottom = lines.splice(stripIndex.bottom).map(stripPrefix); //! Must be done first, or indexes will change.
     }
     if (!Number.isNaN(stripIndex.top)) {
-      this.topComments = lines.splice(0, stripIndex.top + 1).map(stripPrefix);
+      this.top = lines.splice(0, stripIndex.top + 1).map(stripPrefix);
     }
 
     const aggregated = aggregate(lines);
@@ -158,8 +158,8 @@ export class JSONWithPropertyComment {
         // Emit comments before this property
         const comments = this.commentMap.get(propPath);
         if (_isArray(comments)) {
-          for (const c of comments) {
-            lines.push(`${indent}${COMMENT_PREFIX}${c}`);
+          for (let i = 0; i < comments.length; i++) {
+            lines.push(`${indent}${COMMENT_PREFIX}${comments[i]}`);
           }
         }
 
@@ -183,15 +183,15 @@ export class JSONWithPropertyComment {
     };
 
     // Top-level file comments
-    for (const c of this.topComments) {
-      lines.push(`${COMMENT_PREFIX}${c}`);
+    for (let i = 0; i < this.top.length; i++) {
+      lines.push(`${COMMENT_PREFIX}${this.top[i]}`);
     }
 
     serialize(this.data, 0);
 
     // Bottom-level file comments
-    for (const c of this.bottomComments) {
-      lines.push(`${COMMENT_PREFIX}${c}`);
+    for (let i = 0; i < this.bottom.length; i++) {
+      lines.push(`${COMMENT_PREFIX}${this.bottom[i]}`);
     }
 
     return lines.join('\n');
