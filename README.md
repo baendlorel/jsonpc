@@ -1,8 +1,7 @@
 <div align="center">
-
 # jsonpc
 
-**JSON with Property Comments** — A lightweight JSON variant that allows comments in specific positions
+**JSON with Property Comments** — A lightweight JSON variant that allows single-line comments `//` and trailing commas in JSON files.
   
 [![npm version](
 https://img.shields.io/npm/v/jsonpc-ts.svg)](https://www.npmjs.com/package/jsonpc-ts) [![npm downloads](http://img.shields.io/npm/dm/jsonpc-ts.svg)](https://npmcharts.com/compare/jsonpc-ts,token-types?start=1200&interval=30)
@@ -10,50 +9,54 @@ https://img.shields.io/npm/v/jsonpc-ts.svg)](https://www.npmjs.com/package/jsonp
 
 </div>
 
+## Syntax
 
-## Features
+**jsonpc** follows these rules for comment support:
 
-Support one line comments `//` and trailing comma in JSON files.
+1. Trailing commas in arrays and objects are allowed
+2. Only single-line comments starting with `//` are supported
+3. Comments must occupy an entire line
+4. Multiple consecutive comment lines are allowed, but each must start with `//`
+5. Valid comment positions:
+  1. Top of the file (before any JSON content)
+  2. Bottom of the file (after all JSON content)
+  3. Above property names — Directly above a property name in an object
 
-See [Rules](#rules) for details.
 
-## Installation
+_Other positions and block comments are not allowed._
 
-```bash
-pnpm add jsonpc-ts
-# or
-npm install jsonpc-ts
-# or
-yarn add jsonpc-ts
-```
+### Examples
 
-## Quick Start
-
-### Parse JSON with comments
-
-```ts
-import { parse } from 'jsonpc-ts';
-
-const text = `
-// File-level header comment
-// Can have multiple lines
-
+```jsonc
+// ✅ Valid: Top-level file comment
+// ✅ Valid: Multiple consecutive comments allowed
 {
-  // User name
+  // ✅ Valid: Comment above property name
   "name": "Alice",
 
-  // Nested object comment
-  "profile": {
-    "age": 25
-  },
+  // ✅ Valid: Comment above array element (primitive)
+  "items": [
+    // ❌ Invalid: Comment not above a property
+    1,
+    2,
+  ],
 
-  // Array comment
-  "items": [1, 2, 3,]
+  "users": [
+    {
+    // ✅ Valid: Comment above object property in array
+    // ✅ Valid: 1 Multiple consecutive comments allowed
+    // ✅ Valid: 2 Multiple consecutive comments allowed
+      "name": "Bob"
+    },
+    // ❌ Invalid: Comment not above a property
+    "sdaf"
+  ],
+
+  /* ❌ Invalid: Block comments not supported */
+  "key": "value",
+  // ❌ Invalid: Comment not above a property
 }
-// File-level footer comment
-`;
-
-const jsonpc = parse(text);
+// ✅ Valid: Bottom-level file comment
 ```
 
 ### Read and set comments
@@ -110,54 +113,6 @@ const clean = jsonpc.toObject();
 const jsonString = jsonpc.stringifyWithoutComment(null, 2);
 ```
 
-## Rules
-
-jsonpc follows these rules for comment support:
-
-### Comment Syntax
-
-1. Trailing commas in arrays and objects are allowed
-2. Only single-line comments starting with `//` are supported
-3. Comments must occupy an entire line
-4. Multiple consecutive comment lines are allowed, but each must start with `//`
-
-### Valid Comment Positions
-
-Comments are **ONLY** valid in these specific positions:
-
-1. **File-level header** — At the very top of the file (before any JSON content)
-2. **File-level footer** — At the very bottom of the file (after all JSON content)
-3. **Above property names** — Directly above a property name in an object
-
-### Examples
-
-```json
-// ✅ Valid: Top-level file comment
-{
-  // ✅ Valid: Comment above property name
-  "name": "Alice",
-
-  // ✅ Valid: Comment above array element (primitive)
-  "items": [
-    // ❌ Invalid: Comment not above a property
-    1,
-    2,
-  ],
-
-  // ✅ Valid: Comment above object property in array
-  "users": [
-    {
-      // User name
-      "name": "Bob"
-    }
-  ],
-
-  /* ❌ Invalid: Block comments not supported */
-  "key": "value",
-  // ❌ Invalid: Comment not above a property
-}
-// ✅ Valid: Bottom-level file comment
-```
 
 ## API
 
@@ -210,50 +165,6 @@ The `updateArray` method supports these array operations:
 - `splice` — Insert/delete/replace elements
 - `sort` — Sort the array
 - `reverse` — Reverse the array
-
-## Complete Example
-
-```ts
-import { parse } from 'jsonpc-ts';
-
-// 1. Parse configuration file
-const configText = `
-// Application configuration
-{
-  // Server address
-  "host": "localhost",
-  "port": 3000,
-
-  // Feature flags
-  "features": {
-    "auth": true,
-    "logging": false
-  },
-
-  // Allowed domain list
-  "allowedDomains": ["example.com", "test.com",]
-}
-`;
-
-const config = parse(configText);
-
-// 2. Read configuration
-const host = config.get('host');              // → "localhost"
-const isAuthEnabled = config.get('features.auth'); // → true
-
-// 3. Update configuration
-config.set('port', 8080);
-config.updateArray('allowedDomains', 'push', ['api.example.com']);
-
-// 4. Update comments
-config.setComments('port', ['Server port (updated)']);
-
-// 5. Serialize and save
-console.log(config.stringify());
-
-// 6. Get pure object for application use
-const appConfig = config.toObject();
-```
 
 ## Comparison with Alternatives
 
