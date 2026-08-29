@@ -1,4 +1,5 @@
 import type { PathMap } from './path-map.js';
+import { quickSort } from './array-sort.js';
 
 export type ArrayMethods = {
   [K in keyof Array<any>]: Array<any>[K] extends Function ? K : never;
@@ -14,19 +15,6 @@ type Operations = {
 };
 
 export type SupportedArrayMethods = 'push' | 'pop' | 'shift' | 'unshift' | 'splice' | 'sort' | 'reverse' | 'fill';
-
-const defaultCompare = function (a: any, b: any) {
-  a = String(a);
-  b = String(b);
-
-  if (a < b) {
-    return -1;
-  } else if (a > b) {
-    return 1;
-  } else {
-    return 0;
-  }
-};
 
 export const arrayOpers: Partial<Operations> = {
   push: (arr, args, _commentsMap, _path) => {
@@ -86,9 +74,7 @@ export const arrayOpers: Partial<Operations> = {
     arr.splice.apply(arr, args);
   },
 
-  sort: (arr, args, commentsMap, path) => {
-    const compare = args[0] || defaultCompare;
-  },
+  sort: (arr, args, commentsMap, path) => quickSort(arr, 0, arr.length - 1, commentsMap, path, args[0]),
 
   reverse: (arr, _args, commentsMap, path) => {
     const len = arr.length;

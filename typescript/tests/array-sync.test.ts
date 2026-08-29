@@ -243,7 +243,7 @@ describe('Array operations with commentsMap synchronization', () => {
   });
 
   describe('sort', () => {
-    it('should clear comments for array elements after sort', () => {
+    it('should keep comments synced with elements after sort', () => {
       const text = `{
   "arr": [
     // comment for 0
@@ -258,11 +258,84 @@ describe('Array operations with commentsMap synchronization', () => {
 
       jpc.updateArray('arr', 'sort', []);
 
-      // All array element comments should be cleared
-      expect(jpc.getComments('arr.0')).toBeUndefined();
-      expect(jpc.getComments('arr.1')).toBeUndefined();
-      expect(jpc.getComments('arr.2')).toBeUndefined();
+      // Comments should follow their elements after sorting
+      // Original: [3 (c0), 1 (c1), 2 (c2)] -> Sorted: [1 (c1), 2 (c2), 3 (c0)]
+      expect(jpc.getComments('arr.0')).toEqual(['comment for 1']);
+      expect(jpc.getComments('arr.1')).toEqual(['comment for 2']);
+      expect(jpc.getComments('arr.2')).toEqual(['comment for 0']);
       expect(jpc.get('arr')).toEqual([1, 2, 3]);
+    });
+
+    it('should handle sort with custom compare function', () => {
+      const text = `{
+  "arr": [
+    // a comment
+    "c",
+    // b comment
+    "a",
+    // c comment
+    "b"
+  ]
+}`;
+      const jpc = new JSONPC(text);
+
+      // Sort descending
+      jpc.updateArray('arr', 'sort', [(a: string, b: string) => b.localeCompare(a)]);
+
+      // Comments should follow elements
+      // Original: ["c" (a), "a" (b), "b" (c)] -> Desc: ["c" (a), "b" (c), "a" (b)]
+      expect(jpc.getComments('arr.0')).toEqual(['a comment']);
+      expect(jpc.getComments('arr.1')).toEqual(['c comment']);
+      expect(jpc.getComments('arr.2')).toEqual(['b comment']);
+      expect(jpc.get('arr')).toEqual(['c', 'b', 'a']);
+    });
+
+    it('should handle already sorted array', () => {
+      const text = `{
+  "arr": [
+    // first
+    1,
+    // second
+    2,
+    // third
+    3
+  ]
+}`;
+      const jpc = new JSONPC(text);
+
+      jpc.updateArray('arr', 'sort', []);
+
+      // Comments should remain in place
+      expect(jpc.getComments('arr.0')).toEqual(['first']);
+      expect(jpc.getComments('arr.1')).toEqual(['second']);
+      expect(jpc.getComments('arr.2')).toEqual(['third']);
+      expect(jpc.get('arr')).toEqual([1, 2, 3]);
+    });
+
+    it('should handle single-element array', () => {
+      const text = `{
+  "arr": [
+    // only
+    42
+  ]
+}`;
+      const jpc = new JSONPC(text);
+
+      jpc.updateArray('arr', 'sort', []);
+
+      expect(jpc.getComments('arr.0')).toEqual(['only']);
+      expect(jpc.get('arr')).toEqual([42]);
+    });
+
+    it('should handle empty array', () => {
+      const text = `{
+  "arr": []
+}`;
+      const jpc = new JSONPC(text);
+
+      jpc.updateArray('arr', 'sort', []);
+
+      expect(jpc.get('arr')).toEqual([]);
     });
   });
 
