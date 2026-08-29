@@ -59,6 +59,22 @@ export class PathMap {
     this.set(newKeys, value);
   }
 
+  exchange(akeys: any[], bkeys: any[]) {
+    const aValue = this.get(akeys);
+    const bValue = this.get(bkeys);
+
+    if (aValue === undefined && bValue === undefined) {
+      return;
+    }
+
+    if (aValue !== undefined) {
+      this.set(bkeys, aValue);
+    }
+    if (bValue !== undefined) {
+      this.set(akeys, bValue);
+    }
+  }
+
   clear() {
     clear(this.map);
   }

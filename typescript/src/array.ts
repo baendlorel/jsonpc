@@ -66,41 +66,53 @@ function shiftArrayIndices(basePropPath: string[], commentsMap: PathMap, startId
   }
 }
 
-export const arrayOpers: Partial<Record<keyof ArrayFunctions, (arr: any[], args: any[], commentsMap: PathMap, basePropPath: string[]) => void>> = {
+type Operations = {
+  [K in keyof ArrayFunctions]: (
+    arr: any[],
+    args: Parameters<Array<any>[K]>,
+    commentsMap: PathMap,
+    basePropPath: string[],
+  ) => void;
+};
+
+export const arrayOpers: Partial<Operations> = {
   push: (_arr, _args, _commentsMap, _basePropPath) => {
     // Does nothing since commentsMap's path is not changed.
   },
 
-  pop: (arr, _args, commentsMap, basePropPath) => {
-    // Remove the last index's comments
-    const lastIndex = arr.length; // After pop, this was the last index
-    commentsMap.delete([...basePropPath, lastIndex.toString()]);
+  pop: (arr, _args, commentsMap, propPath) => {
+    commentsMap.delete([...propPath, arr.length - 1]);
   },
 
   shift: (arr, _args, commentsMap, basePropPath) => {
-    // All indices decrease by 1
-    // Shift all indices starting from 0 (inclusive)
-    shiftArrayIndices(basePropPath, commentsMap, 0, -1);
-
-    // Remove the comment for index 0 (the shifted-out element)
-    commentsMap.delete([...basePropPath, '0']);
+    const lastIndex = arr.length - 1;
+    for (let i = 0; i < lastIndex - 1; i++) {
+      commentsMap.move([...basePropPath, i + 1], [...basePropPath, i]);
+    }
+    commentsMap.delete([...basePropPath, lastIndex]);
   },
 
-  unshift: (arr, _args, commentsMap, basePropPath) => {
-    // All indices increase by 1
-    // Shift all indices starting from 0 (inclusive)
-    shiftArrayIndices(basePropPath, commentsMap, 0, 1);
+  unshift: (arr, args, commentsMap, basePropPath) => {
+    const delta = args.length;
+    for (let i = arr.length - 1; i >= 0; i--) {
+      commentsMap.move([...basePropPath, i], [...basePropPath, i + delta]);
+    }
+
+    for (let i = 0; i < delta; i++) {
+      commentsMap.delete([...basePropPath, i]);
+    }
   },
 
-  splice: (arr, args, commentsMap, basePropPath) => {
+  // TODO 在此之下的还没改造好
+
+  splice: (_arr, args, commentsMap, basePropPath) => {
     const start = args[0] as number;
-    const deleteCount = args[1] as number || 0;
+    const deleteCount = (args[1] as number) || 0;
     const insertCount = Math.max(0, args.length - 2);
 
     if (deleteCount > 0) {
-      // Remove comments for deleted indices
       for (let i = start; i < start + deleteCount; i++) {
-        commentsMap.delete([...basePropPath, i.toString()]);
+        commentsMap.delete([...basePropPath, i]);
       }
     }
 
@@ -112,16 +124,6 @@ export const arrayOpers: Partial<Record<keyof ArrayFunctions, (arr: any[], args:
   },
 
   sort: (arr, _args, commentsMap, basePropPath) => {
-    // Sort changes the order of elements, so we need to remap comments
-    // We need to know the original order vs the new order
-    // Since we only have the sorted array, we'll need to track this during the sort operation
-    // For now, we'll collect all comments before sort and try to preserve them by value matching
-
-    // This is complex because sort doesn't provide information about which element moved where
-    // The most reliable approach is to clear all array element comments for this path
-    // Or, we could require users to re-set comments after sort
-    // For now, let's just clear comments for this array's elements
-
     const traverseAndDelete = (currentMap: Map<any, any>, currentPath: string[]) => {
       for (const [key, value] of Array.from(currentMap.entries())) {
         const newPath = [...currentPath, key];
@@ -192,8 +194,8 @@ export const arrayOpers: Partial<Record<keyof ArrayFunctions, (arr: any[], args:
   fill: (arr, args, commentsMap, basePropPath) => {
     // fill replaces values, so we should clear comments for the affected range
     const value = args[0];
-    const start = args[1] !== undefined ? args[1] as number : 0;
-    const end = args[2] !== undefined ? args[2] as number : arr.length;
+    const start = args[1] !== undefined ? (args[1] as number) : 0;
+    const end = args[2] !== undefined ? (args[2] as number) : arr.length;
 
     for (let i = start; i < end; i++) {
       commentsMap.delete([...basePropPath, i.toString()]);

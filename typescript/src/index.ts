@@ -104,16 +104,14 @@ export class JSONPC {
   }
 
   updateArray<Fn extends keyof ArrayFunctions>(propPath: string, functionName: Fn, args: ArrayOperationArgs<Fn>): this {
-    const arr = ReflectDeep.get(this.data, propPath.split('.'));
+    const k = propPath.split('.');
+    const arr = ReflectDeep.get(this.data, k);
     if (!_isArray(arr)) {
       throw new TypeError(`The property path "${propPath}" is not an array.`);
     }
 
     // First, sync the commentsMap by calling the corresponding array operation handler
-    const operHandler = arrayOpers[functionName];
-    if (operHandler) {
-      operHandler(arr, args as any[], this.commentMap, propPath.split('.'));
-    }
+    arrayOpers[functionName]?.(arr, args, this.commentMap, k);
 
     // Then, perform the actual array operation
     arr[functionName](...args);
