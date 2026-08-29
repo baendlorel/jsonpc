@@ -92,7 +92,18 @@ export const reverse: Operations['reverse'] = (arr, _args, commentsMap, path) =>
   arr.reverse();
 };
 
-export class ArrayOperator {
+export const arrayOpers = {
+  push,
+  pop,
+  shift,
+  unshift,
+  splice,
+  sort,
+  reverse,
+};
+
+// * Keep this.
+class ArrayOperator {
   /**
    * Map a property path to a comment string array.
    *

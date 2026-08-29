@@ -2,7 +2,7 @@ import { ReflectDeep } from 'reflect-deep';
 import { isComment, trim, stripTopBottom, aggregate, stripPrefix, mark, visit, clone, serialize } from './core.js';
 import { PathMap } from './path-map.js';
 import { _isArray } from './common.js';
-import { getArray, SupportedArrayMethods } from './array.js';
+import { arrayOpers, getArray, SupportedArrayMethods } from './array.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
   (globalThis as any).COMMENT_PREFIX = '//';
@@ -103,7 +103,7 @@ export class JSONPC {
    */
   updateArray<Fn extends SupportedArrayMethods>(propPath: string, method: Fn, args: Parameters<Array<any>[Fn]>): this {
     const { k, arr } = getArray(propPath, this.data);
-    arrayOpers[method](arr, args, this.commentMap, k);
+    arrayOpers[method](arr, args as any, this.commentMap, k);
     return this;
   }
 
