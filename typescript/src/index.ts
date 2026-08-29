@@ -64,15 +64,11 @@ export class JSONPC {
    * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
    * @param comments comment content lines (without `//` prefix)
    */
-  setComments(propPath: string, comments: string[]): this;
-  setComments(propPath: string, fn: (oldComments: string[]) => string[]): this;
-  setComments(propPath: string, args: string[] | ((oldComments: string[]) => string[])): this {
-    if (typeof args === 'function') {
-      args = args(this.commentMap.get(propPath.split('.')) ?? []);
-    } else if (!_isArray(args)) {
+  setComments(propPath: string, comments: string[]): this {
+    if (!_isArray(comments)) {
       throw new TypeError(`Invalid comments argument, must be an array of strings or a function.`);
     }
-    this.commentMap.set(propPath.split('.'), args);
+    this.commentMap.set(propPath.split('.'), comments);
     return this;
   }
 
@@ -153,12 +149,22 @@ export class JSONPC {
 }
 
 /**
- * Parse jsonpc text into an object.
- * - Use `new JSONPC(text)` to create an operatable instance. You can set values/comments of any property path.
+ * Parse jsonpc text into an operatable instance.
+ * - You can set values/comments of any property path.
+ * - You can use `result.toObject()` to get a pure js object without comments for convenience.
  * @param text raw json text with property comments.
  * @param reviver Same as the reviver in `JSON.parse`.
- * @returns a pure js object, with all comments stripped.
+ * @returns an operatable instance.
  */
-export function parse(text: string, reviver?: (this: any, key: string, value: any) => any): any {
-  return new JSONPC(text, reviver).toObject();
+export function parse(text: string, reviver?: (this: any, key: string, value: any) => any): JSONPC {
+  return new JSONPC(text, reviver);
+}
+
+export function stringify(
+  jsonpc: JSONPC,
+  replacer?: ((this: any, key: string, value: any) => any) | null,
+  space?: string | number,
+): string;
+export function stringify(jsonpc: JSONPC, ...args: any[]): string {
+  return jsonpc.stringify(...args);
 }
