@@ -1,6 +1,7 @@
 import { quickSort } from './array-sort.js';
 import { ReflectDeep } from 'reflect-deep';
 import { _isArray, _move, _delete, _exchange } from './common.js';
+import { split } from './core.js';
 
 export type ArrayMethods = {
   [K in keyof Array<any>]: Array<any>[K] extends Function ? K : never;
@@ -12,8 +13,8 @@ type Operations = {
 
 export type SupportedArrayMethods = 'push' | 'pop' | 'shift' | 'unshift' | 'splice' | 'sort' | 'reverse';
 
-export const getArray = (propPath: string, data: any) => {
-  const k = propPath.split('.');
+export const getArray = (propPath: string | string[], data: any) => {
+  const k = split(propPath);
   const arr = ReflectDeep.get(data, k);
   if (!_isArray(arr)) {
     throw new TypeError(`The property path "${propPath}" is not an array.`);

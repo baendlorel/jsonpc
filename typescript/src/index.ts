@@ -1,4 +1,15 @@
-import { isComment, trim, stripTopBottom, aggregate, stripPrefix, mark, visit, clone, serialize } from './core.js';
+import {
+  isComment,
+  trim,
+  stripTopBottom,
+  aggregate,
+  stripPrefix,
+  mark,
+  visit,
+  clone,
+  serialize,
+  split,
+} from './core.js';
 import { _isArray, _get, _set } from './common.js';
 import { arrayOpers, getArray, SupportedArrayMethods } from './array.js';
 
@@ -54,11 +65,12 @@ export class JSONPC {
    * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
    * @param comments comment content lines (without `//` prefix)
    */
-  setComments(propPath: string, comments: string[]): this {
+  setComments(propPath: string | string[], comments: string[]): this {
     if (!_isArray(comments)) {
       throw new TypeError(`Invalid comments argument, must be an array of strings or a function.`);
     }
-    _set(this.commentMap, propPath.split('.'), comments);
+    const k = split(propPath);
+    _set(this.commentMap, k, comments);
     return this;
   }
 
@@ -68,8 +80,8 @@ export class JSONPC {
    * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
    * @returns comment content lines (without `//` prefix), or `undefined`
    */
-  getComments(propPath: string): string[] | undefined {
-    return _get(this.commentMap, propPath.split('.'));
+  getComments(propPath: string | string[]): string[] | undefined {
+    return _get(this.commentMap, split(propPath));
   }
 
   /**
@@ -77,8 +89,8 @@ export class JSONPC {
    * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
    * @param value
    */
-  set(propPath: string, value: any): this {
-    _set(this.data, propPath.split('.'), value);
+  set(propPath: string | string[], value: any): this {
+    _set(this.data, split(propPath), value);
     return this;
   }
 
@@ -87,8 +99,8 @@ export class JSONPC {
    * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
    * @param defaultValue the value to return if the property path does not exist
    */
-  get(propPath: string, defaultValue?: any) {
-    const result = _get(this.data, propPath.split('.'));
+  get(propPath: string | string[], defaultValue?: any) {
+    const result = _get(this.data, split(propPath));
     return result === undefined ? defaultValue : result;
   }
 
@@ -99,7 +111,11 @@ export class JSONPC {
    * @param args Arguments to pass to the array method
    * @returns The instance itself for chaining
    */
-  updateArray<Fn extends SupportedArrayMethods>(propPath: string, method: Fn, args: Parameters<Array<any>[Fn]>): this {
+  updateArray<Fn extends SupportedArrayMethods>(
+    propPath: string | string[],
+    method: Fn,
+    args: Parameters<Array<any>[Fn]>,
+  ): this {
     const { k, arr } = getArray(propPath, this.data);
     arrayOpers[method](arr, args as any, this.commentMap, k);
     return this;

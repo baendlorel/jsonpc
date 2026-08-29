@@ -4,6 +4,15 @@ export function isComment(t: string) {
   return t.startsWith(COMMENT_PREFIX);
 }
 
+export function split(propPath: string | string[]): string[] {
+  if (_isArray(propPath)) {
+    return propPath;
+  } else if (typeof propPath === 'string') {
+    return propPath.split('.');
+  }
+  throw new TypeError(`Invalid propPath argument, must be a string or an array of strings.`);
+}
+
 export function validComments(comments: any): comments is string[] {
   return _isArray(comments) && comments.every((c) => typeof c === 'string');
 }
@@ -376,7 +385,6 @@ export function serialize(
       serialize(commentMap, val, pad, replacer, depth + 1, propPath, lines);
     }
 
-    // EPIC 添加trailing comma，但是在不用eval的情况下很困难
     // * trailing comma for array elements
     lines[lines.length - 1] += ',';
   }
