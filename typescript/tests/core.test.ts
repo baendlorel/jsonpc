@@ -12,9 +12,6 @@ import {
 import { JSONWithPropertyComment } from '../src/index.js';
 
 describe('core', () => {
-  // ──────────────────────────────────────────────
-  // isComment
-  // ──────────────────────────────────────────────
   describe('isComment', () => {
     it('should return true for // lines', () => {
       expect(isComment('// foo')).toBe(true);
@@ -30,9 +27,6 @@ describe('core', () => {
     });
   });
 
-  // ──────────────────────────────────────────────
-  // normalizeLines
-  // ──────────────────────────────────────────────
   describe('normalizeLines', () => {
     it('should split text into trimmed non-empty lines', () => {
       const result = normalizeLines('  foo  \n  bar  \n');
@@ -60,9 +54,6 @@ describe('core', () => {
     });
   });
 
-  // ──────────────────────────────────────────────
-  // stripTopBottom
-  // ──────────────────────────────────────────────
   describe('stripTopBottom', () => {
     it('should strip top and bottom comments', () => {
       const lines = ['// top1', '// top2', '"a":1', '"b":2', '// bottom1'];
@@ -99,10 +90,7 @@ describe('core', () => {
     });
   });
 
-  // ──────────────────────────────────────────────
-  // aggregateComments
-  // ──────────────────────────────────────────────
-  describe('aggregateComments', () => {
+  describe('aggregate', () => {
     it('should aggregate consecutive comments into arrays', () => {
       const lines = ['{', '// c1', '// c2', '"a": 1', '}'];
       const result = aggregate(lines);
@@ -126,9 +114,6 @@ describe('core', () => {
     });
   });
 
-  // ──────────────────────────────────────────────
-  // interpretName
-  // ──────────────────────────────────────────────
   describe('interpretName', () => {
     it('should extract a simple property name', () => {
       expect(interpretName('"foo": 1')).toBe('foo');
@@ -153,9 +138,6 @@ describe('core', () => {
     });
   });
 
-  // ──────────────────────────────────────────────
-  // uuidName
-  // ──────────────────────────────────────────────
   describe('uuidName', () => {
     it('should append an underscore and UUID to the origin', () => {
       const result = uuidName('foo');
@@ -169,10 +151,7 @@ describe('core', () => {
     });
   });
 
-  // ──────────────────────────────────────────────
-  // convertCommentsToProperties
-  // ──────────────────────────────────────────────
-  describe('convertCommentsToProperties', () => {
+  describe('mark', () => {
     it('should convert comments into uuid-named properties with comments as value', () => {
       const input = ['{', ['// comment for x'], '"x": 1', '}'];
       const result = mark(input);
@@ -212,9 +191,6 @@ describe('core', () => {
     });
   });
 
-  // ──────────────────────────────────────────────
-  // visit
-  // ──────────────────────────────────────────────
   describe('visit', () => {
     it('should collect prop paths for uuid-named keys', () => {
       // In the new design, the uuid key holds the comment array directly

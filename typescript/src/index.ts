@@ -1,28 +1,11 @@
 import { ReflectDeep } from 'reflect-deep';
-import { _isArray, COMMENT_PREFIX } from './common.js';
-import {
-  isComment,
-  aggregate,
-  normalizeLines,
-  stripTopBottom,
-  stripPrefix,
-  mark,
-  visit,
-  clone,
-  validComments,
-} from './core.js';
+import { isComment, aggregate, normalizeLines, stripTopBottom, stripPrefix, mark, visit, clone } from './core.js';
 import { PathMap } from './path-map.js';
+import { COMMENT_PREFIX } from './common.js';
 
 export class JSONWithPropertyComment {
-  /**
-   * Comments at the top of the file, before any json content.
-   */
-  private top: string[] = [];
-
-  /**
-   * Comments at the bottom of the file, after any json content.
-   */
-  private bottom: string[] = [];
+  private topComments: string[] = [];
+  private bottomComments: string[] = [];
 
   /** Maps property path (string[]) → comment content lines (string[], without `//` prefix) */
   private commentMap: PathMap = new PathMap();
@@ -48,10 +31,10 @@ export class JSONWithPropertyComment {
     // Fill the whole file level comments
     const stripIndex = stripTopBottom(lines);
     if (!Number.isNaN(stripIndex.bottom)) {
-      this.bottom = lines.splice(stripIndex.bottom).map(stripPrefix); //! Must be done first, or indexes will change.
+      this.bottomComments = lines.splice(stripIndex.bottom).map(stripPrefix); //! Must be done first, or indexes will change.
     }
     if (!Number.isNaN(stripIndex.top)) {
-      this.top = lines.splice(0, stripIndex.top + 1).map(stripPrefix);
+      this.topComments = lines.splice(0, stripIndex.top + 1).map(stripPrefix);
     }
 
     const aggregated = aggregate(lines);
@@ -67,9 +50,6 @@ export class JSONWithPropertyComment {
    * @param comments comment content lines (without `//` prefix)
    */
   setComments(propPath: string, comments: string[]) {
-    if (!validComments(comments)) {
-      throw new Error(`Comments must be an array of strings, got: ${typeof comments}`);
-    }
     this.commentMap.set(propPath.split('.'), comments);
   }
 
@@ -83,17 +63,13 @@ export class JSONWithPropertyComment {
     return this.commentMap.get(propPath.split('.'));
   }
 
-  set(propPath: string, value: any, comments?: string[]) {
+  set(propPath: string, value: any) {
     ReflectDeep.set(this.data, propPath.split('.'), value);
-    if (validComments(comments)) {
-      this.setComments(propPath, comments);
-    } else if (comments !== undefined) {
-      throw new Error(`Comments must be an array of strings, got: ${typeof comments}`);
-    }
   }
 
   get(propPath: string, defaultValue?: any) {
-    return ReflectDeep.get(this.data, propPath.split('.')) ?? defaultValue;
+    const result = ReflectDeep.get(this.data, propPath.split('.'));
+    return result === undefined ? defaultValue : result;
   }
 
   /**
@@ -121,7 +97,7 @@ export class JSONWithPropertyComment {
         return;
       }
 
-      if (_isArray(obj)) {
+      if (Array.isArray(obj)) {
         if (obj.length === 0) {
           lines.push(`${prefix}[]`);
           return;
@@ -146,20 +122,46 @@ export class JSONWithPropertyComment {
         return;
       }
 
-      lines.push(`${prefix}{`);
-      for (let i = 0; i < keys.length; i++) {
-        const key = keys[i];
+      // Collect entries with their values resolved through replacer
+      interface Entry {
+        key: string;
+        val: any;
+        skipped: boolean;
+        propPath: string[];
+      }
+      const entries: Entry[] = keys.map((key) => {
         const val = replacer ? replacer.call(obj, key, obj[key]) : obj[key];
-        const isLast = i === keys.length - 1;
-        const propPath = path.concat(key);
+        return {
+          key,
+          val,
+          skipped: val === undefined,
+          propPath: path.concat(key),
+        };
+      });
+
+      const active = entries.filter((e) => !e.skipped);
+
+      if (active.length === 0) {
+        lines.push(`${prefix}{}`);
+        return;
+      }
+
+      lines.push(`${prefix}{`);
+      for (let i = 0; i < active.length; i++) {
+        const { key, val, propPath } = active[i];
+        const isLast = i === active.length - 1;
+        const indent = ' '.repeat((depth + 1) * pad);
 
         // Emit comments before this property
-        (this.commentMap.get(propPath) as string[])?.forEach((c) =>
-          lines.push(`${' '.repeat((depth + 1) * pad)}${COMMENT_PREFIX}${c}`),
-        );
+        const comments = this.commentMap.get(propPath);
+        if (Array.isArray(comments)) {
+          for (const c of comments) {
+            lines.push(`${indent}${COMMENT_PREFIX}${c}`);
+          }
+        }
 
         // Emit the property key
-        const keyLine = `${' '.repeat((depth + 1) * pad)}"${key}":`;
+        const keyLine = `${indent}"${key}":`;
         lines.push(keyLine);
 
         // Serialize the value — for primitives, inline on the same line
@@ -179,12 +181,16 @@ export class JSONWithPropertyComment {
     };
 
     // Top-level file comments
-    this.top.forEach((c) => lines.push(`${COMMENT_PREFIX}${c}`));
+    for (const c of this.topComments) {
+      lines.push(`${COMMENT_PREFIX}${c}`);
+    }
 
     serialize(this.data, 0);
 
     // Bottom-level file comments
-    this.bottom.forEach((c) => lines.push(`${COMMENT_PREFIX}${c}`));
+    for (const c of this.bottomComments) {
+      lines.push(`${COMMENT_PREFIX}${c}`);
+    }
 
     return lines.join('\n');
   }
@@ -207,3 +213,5 @@ export class JSONWithPropertyComment {
     return JSON.stringify(this.toJSON(), ...args);
   }
 }
+
+export { JSONWithPropertyComment as JSONPC };

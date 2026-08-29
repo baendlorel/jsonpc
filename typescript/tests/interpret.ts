@@ -1,11 +1,5 @@
-import {
-  aggregateComments,
-  convertCommentsToProperties,
-  isComment,
-  normalizeLines,
-  stripTopBottom,
-  visit,
-} from '../src/core.js';
+import { aggregate, mark, isComment, normalizeLines, stripTopBottom, visit } from '../src/core.js';
+import { JSONWithPropertyComment } from '../src/index.js';
 const text = `
 // Top comment 1
 // Top comment 2
@@ -48,13 +42,15 @@ function main() {
     lines.splice(0, stripIndex.top + 1);
   }
 
-  const aggregated = aggregateComments(lines);
-  const named = convertCommentsToProperties(aggregated);
+  const aggregated = aggregate(lines);
+  const named = mark(aggregated);
 
   console.log('aggregated:', aggregated);
   // console.log('named.lines:', named.lines);
   // console.log('named.names:', named.unames);
   const map = visit(JSON.parse(named.lines.join('')), named.unames);
   console.log('map:', map);
+
+  const j = new JSONWithPropertyComment(text);
 }
 main();
