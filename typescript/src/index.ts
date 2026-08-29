@@ -12,9 +12,10 @@ export class JSONPC {
   private top: string[] = [];
   private bottom: string[] = [];
 
-  /** Maps property path (string[]) → comment content lines (string[], without `//` prefix) */
-  private commentMap: PathMap = new PathMap();
-
+  /**
+   * Map a property path to a comment string array.
+   */
+  private commentMap = new PathMap();
   private data: any;
 
   /**
