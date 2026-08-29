@@ -12,6 +12,7 @@ import {
 } from './core.js';
 import { PathMap } from './path-map.js';
 import { _isArray } from './common.js';
+import { type ArrayFunctions, type ArrayOperationArgs } from './array.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
   (globalThis as any).COMMENT_PREFIX = '// ';
@@ -102,7 +103,13 @@ export class JSONPC {
     return result === undefined ? defaultValue : result;
   }
 
-  updateArray(propPath: string, functionName: string, args: any[]): this {
+  updateArray<Fn extends keyof ArrayFunctions>(propPath: string, functionName: Fn, args: ArrayOperationArgs<Fn>): this {
+    const arr = ReflectDeep.get(this.data, propPath.split('.'));
+    if (!_isArray(arr)) {
+      throw new TypeError(`The property path "${propPath}" is not an array.`);
+    }
+    arr[functionName](...args);
+
     return this;
   }
 
