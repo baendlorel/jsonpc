@@ -21,6 +21,7 @@
     "dist"
   ],
   "scripts": {
+    "int": "tsx tests/interpreter.ts",
     "test": "vitest",
     "try": "tsx src/index.ts"
   },

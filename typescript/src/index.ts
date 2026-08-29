@@ -15,13 +15,14 @@ export class JSONWithPropertyComment {
   /**
    * This is actually the parser
    * @param text json text
+   * @param reviver A function that transforms the results. This function is called for each member of the object.
    */
-  constructor(text: string) {
+  constructor(text: string, reviver?: (this: any, key: string, value: any) => any) {
     const lines = normalizeLines(text);
     const withoutComments = lines.filter((v) => !isComment(v));
     const rawJson = withoutComments.join('');
     try {
-      JSON.parse(rawJson);
+      this.data = reviver ? JSON.parse(rawJson, reviver) : JSON.parse(rawJson);
     } catch (e) {
       throw new Error(`Json text being parsed is invalid, ${(e as Error).message}`);
     }
@@ -80,8 +81,12 @@ export class JSONWithPropertyComment {
    * @param replacer Like the replacer in `JSON.stringify`, default is `undefined`.
    * @param space default is 2.
    */
-  stringify(replacer?: (this: any, key: string, value: any) => any, space?: number) {
+  stringify(
+    replacer?: ((this: any, key: string, value: any) => any) | (number | string)[] | null,
+    space?: number,
+  ): string {
     const pad = space ?? 2;
+    replacer ??= null;
 
     const lines: string[] = [];
 
@@ -93,7 +98,7 @@ export class JSONWithPropertyComment {
       const prefix = ' '.repeat(depth * pad);
 
       if (obj === null || typeof obj !== 'object') {
-        lines.push(`${prefix}${JSON.stringify(obj)}`);
+        lines.push(`${prefix}${JSON.stringify(obj, replacer as any, pad)}`);
         return;
       }
 
@@ -104,7 +109,7 @@ export class JSONWithPropertyComment {
         }
         lines.push(`${prefix}[`);
         for (let i = 0; i < obj.length; i++) {
-          const val = replacer ? replacer.call(obj, String(i), obj[i]) : obj[i];
+          const val = typeof replacer === 'function' ? replacer.call(obj, String(i), obj[i]) : obj[i];
           const isLast = i === obj.length - 1;
           serialize(val, depth + 1, path.concat(String(i)));
           if (!isLast) {
@@ -130,7 +135,7 @@ export class JSONWithPropertyComment {
         propPath: string[];
       }
       const entries: Entry[] = keys.map((key) => {
-        const val = replacer ? replacer.call(obj, key, obj[key]) : obj[key];
+        const val = typeof replacer === 'function' ? replacer.call(obj, key, obj[key]) : obj[key];
         return {
           key,
           val,
@@ -167,7 +172,7 @@ export class JSONWithPropertyComment {
         // Serialize the value — for primitives, inline on the same line
         const isObj = val !== null && typeof val === 'object';
         if (!isObj) {
-          lines[lines.length - 1] += JSON.stringify(val);
+          lines[lines.length - 1] += JSON.stringify(val, replacer as any, pad);
         } else {
           serialize(val, depth + 1, propPath);
         }
@@ -208,8 +213,11 @@ export class JSONWithPropertyComment {
    * Transform to standard JSON string without comments.
    * Equal to `JSON.stringify(this.toJSON(), null, 2)`.
    */
-  toJSONString(replacer?: (this: any, key: string, value: any) => any, space?: string | number): string;
-  toJSONString(...args: any[]) {
+  stringifyWithoutComment(
+    replacer?: ((this: any, key: string, value: any) => any) | null,
+    space?: string | number,
+  ): string;
+  stringifyWithoutComment(...args: any[]) {
     return JSON.stringify(this.toJSON(), ...args);
   }
 }

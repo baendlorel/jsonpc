@@ -52,5 +52,6 @@ function main() {
   console.log('map:', map);
 
   const j = new JSONWithPropertyComment(text);
+  console.log(j.stringify(null, 2));
 }
 main();
