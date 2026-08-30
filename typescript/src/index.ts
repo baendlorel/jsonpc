@@ -10,7 +10,7 @@ import {
   serialize,
   split,
 } from './core.js';
-import { _isArray, _get, _set, _has, _mustArray } from './common.js';
+import { _isArray, _get, _set, _has, _mustArray, _delete } from './common.js';
 import { arrayOpers, getArray, SupportedArrayMethods } from './array.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
@@ -75,18 +75,20 @@ export class JSONPC {
 
   set topComments(comments: string[]) {
     _mustArray(comments, 'comments');
-    this.top = comments;
+    this.top = [...comments];
   }
 
   set bottomComments(comments: string[]) {
     _mustArray(comments, 'comments');
-    this.bottom = comments;
+    this.bottom = [...comments];
   }
 
   /**
    * Set entry for a property path.
+   * - set `entry.comments` to `[]` to remove them.
    * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
    * @param entry Optional `value` and `comments` properties. Will set the provided ones.
+   *
    */
   set(propPath: string | string[], entry: Partial<Entry>): this {
     const k = split(propPath);
@@ -95,7 +97,11 @@ export class JSONPC {
     }
     if ('comments' in entry) {
       _mustArray(entry.comments, 'comments');
-      _set(this.commentMap, k, entry.comments);
+      if (entry.comments.length === 0) {
+        _delete(this.commentMap, k);
+      } else {
+        _set(this.commentMap, k, entry.comments);
+      }
     }
     return this;
   }
