@@ -179,6 +179,7 @@ export function stripTrailingCommas(text: string) {
   return chars.filter((c) => c !== null).join('');
 }
 
+// TODO 可以缩短点
 export function uuidName(origin: string) {
   return (
     origin +
@@ -250,21 +251,10 @@ export function visit(o: any, unames: Map<string, string>, path: string[] = [], 
   return commentMap;
 }
 
-export const clone: <T = any>(o: T) => T =
-  structuredClone ??
-  function <T = any>(obj: T): T {
-    if (obj === null || typeof obj !== 'object') {
-      return obj;
-    }
-    if (_isArray(obj)) {
-      return obj.map(clone) as any;
-    }
-    const result: Record<string, any> = {};
-    for (const key in obj) {
-      result[key] = clone(obj[key]);
-    }
-    return result as T;
-  };
+/**
+ * This can be done because pure JSON is simple enough, and we don't need to worry about circular references.
+ */
+export const clone: (o: any) => any = structuredClone || ((o: any) => JSON.parse(JSON.stringify(o)));
 
 /**
  * Serialize a value, appending lines to `lines`.

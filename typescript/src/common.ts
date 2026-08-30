@@ -10,8 +10,7 @@ export function _mustArray(value: any, name: string): asserts value is any[] {
 }
 
 export const _move = (obj: any, from: any[], to: any[]) => {
-  const value = _get(obj, from);
-  _set(obj, to, value);
+  _set(obj, to, _get(obj, from));
   _delete(obj, from);
 };
 

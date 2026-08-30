@@ -1,4 +1,4 @@
-import { quickSort } from './array-sort.js';
+import { quickSort } from '../deprecated/array-sort.js';
 import { get as _get, deleteProperty as _delete } from 'reflect-deep';
 import { _isArray, _move, _exchange } from './common.js';
 import { split } from './core.js';
@@ -8,10 +8,10 @@ export type ArrayMethods = {
 };
 
 type Operations = {
-  [K in keyof ArrayMethods]: (arr: any[], args: Parameters<Array<any>[K]>, commentsMap: any, path: string[]) => void;
+  [K in keyof ArrayMethods]: (arr: any[], args: Parameters<Array<any>[K]>, commentsMap: any, path: any[]) => void;
 };
 
-export type SupportedArrayMethods = 'push' | 'pop' | 'shift' | 'unshift' | 'splice' | 'sort' | 'reverse';
+export type SupportedArrayMethods = 'push' | 'pop' | 'shift' | 'unshift' | 'splice' | 'reverse';
 
 export const getArray = (propPath: string | string[], data: any) => {
   const k = split(propPath);
@@ -24,10 +24,10 @@ export const getArray = (propPath: string | string[], data: any) => {
 
 export const push: Operations['push'] = (arr, args) => arr.push.apply(arr, args);
 
-export const pop: Operations['pop'] = (arr, _args, commentsMap, path) => {
-  _delete(commentsMap, [...path, arr.length - 1]);
-  arr.pop();
-};
+export const pop: Operations['pop'] = (arr, _args, commentsMap, path) => (
+  _delete(commentsMap, [...path, arr.length - 1]),
+  arr.pop()
+);
 
 export const shift: Operations['shift'] = (arr, _args, commentsMap, path) => {
   const lastIndex = arr.length - 1;
@@ -35,7 +35,7 @@ export const shift: Operations['shift'] = (arr, _args, commentsMap, path) => {
     _move(commentsMap, [...path, i + 1], [...path, i]);
   }
   _delete(commentsMap, [...path, lastIndex]);
-  arr.shift();
+  return arr.shift();
 };
 
 export const unshift: Operations['unshift'] = (arr, args, commentsMap, path) => {
@@ -82,9 +82,6 @@ export const splice: Operations['splice'] = (arr, args, commentsMap, path) => {
   arr.splice.apply(arr, args);
 };
 
-export const sort: Operations['sort'] = (arr, args, commentsMap, path) =>
-  quickSort(arr, 0, arr.length - 1, commentsMap, path, args[0]);
-
 export const reverse: Operations['reverse'] = (arr, _args, commentsMap, path) => {
   const len = arr.length;
   for (let i = 0; i < Math.floor(len / 2); i++) {
@@ -99,6 +96,5 @@ export const arrayOpers = {
   shift,
   unshift,
   splice,
-  sort,
   reverse,
 };
