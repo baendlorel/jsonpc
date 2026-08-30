@@ -1,4 +1,4 @@
-import { _isArray, _keys, _notComment, _stripPrefix } from './common.js';
+import { _ascii, _isArray, _keys, _notComment, _stripPrefix } from './common.js';
 import { interpretName } from '../walkers/interpret-name.js';
 import { _set, _get } from './path-map.js';
 
@@ -7,25 +7,24 @@ import { _set, _get } from './path-map.js';
  * Comment prefix `//` is stripped from each line.
  */
 export function aggregate(lines: string[]): Array<string | string[]> {
-  const modified: Array<string | string[]> = [];
-  let array: string[] = [];
+  const result: Array<string | string[]> = [];
+  let comments: string[] | null = null;
   for (let i = 0; i < lines.length; i++) {
     if (_notComment(lines[i])) {
-      array = [];
-      modified.push(lines[i]);
+      comments = null;
+      result.push(lines[i]);
     } else {
-      if (array.length === 0) {
-        modified.push(array);
+      if (!comments) {
+        result.push((comments = []));
       }
-      array.push(_stripPrefix(lines[i]));
+      comments.push(_stripPrefix(lines[i]));
     }
   }
 
-  return modified;
+  return result;
 }
 
 const r = () => Math.random() * 43 + 48;
-export const uniqueName = (origin: string) => origin + String.fromCharCode(r(), r(), r(), r(), r(), r(), r());
 
 /**
  * Marks property with comments into a uniqueName, so that
@@ -36,15 +35,13 @@ export function mark(aggregated: Array<string | string[]>) {
   // Maps unique name to the original name
   const unames = new Map<string, string>();
   const lines = aggregated.map((v, i) => {
+    // Return if it's a normal line
     if (typeof v === 'string') {
-      // Return if it's a normal line, not a comment line
       return v;
     }
 
     const origin = interpretName(aggregated[i + 1] as string);
-    const uname = uniqueName(origin);
-    // ! At this point, we don't know the full property path of
-    // ! this comment yet, so we use unique names to mark them
+    const uname = _ascii(r(), r(), r(), r(), r(), r(), r());
     unames.set(uname, origin);
     return `"${uname}":${JSON.stringify(v)},`;
   });

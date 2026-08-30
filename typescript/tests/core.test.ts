@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { aggregate, uuidName, mark, visit } from '../src/core/initializers.js';
+import { aggregate, mark, visit } from '../src/core/initializers.js';
 import { JSONPC } from '../src/index.js';
-import { ReflectDeep } from 'reflect-deep';
 import { interpretName } from '../src/walkers/interpret-name.js';
+import { _get } from '../src/core/path-map.js';
 
 // Helper function to set comments for a property path
 function setComments(jpc: JSONPC, path: string, comments: string[]): void {
@@ -66,14 +66,6 @@ describe('core', () => {
     });
   });
 
-  describe('uuidName', () => {
-    it('should generate unique values', () => {
-      const a = uuidName('x');
-      const b = uuidName('x');
-      expect(a).not.toBe(b);
-    });
-  });
-
   describe('mark', () => {
     it('should convert comments into uuid-named properties with comments as value', () => {
       const input = ['{', ['// comment for x'], '"x": 1', '}'];
@@ -123,7 +115,7 @@ describe('core', () => {
       const result = visit(obj, names);
       expect(obj).not.toHaveProperty('a_uuid');
       expect(obj).toHaveProperty('a');
-      expect(ReflectDeep.get(result, ['a'])).toEqual({ b: 2 });
+      expect(_get(result, ['a'])).toEqual({ b: 2 });
     });
 
     it('should traverse nested objects and collect uuid-renamed props', () => {
@@ -131,14 +123,14 @@ describe('core', () => {
       const names = new Map([['b_uuid', 'b']]);
       const result = visit(obj, names);
       console.log('visit result:', result);
-      expect(ReflectDeep.get(result, ['a', 'b'])).toEqual(['// hi']);
+      expect(_get(result, ['a', 'b'])).toEqual(['// hi']);
       expect(obj.a).not.toHaveProperty('b_uuid');
       expect(obj.a).toHaveProperty('b');
     });
 
     it('should handle empty object', () => {
       const result = visit({}, new Map());
-      expect(ReflectDeep.get(result, ['anything'])).toBeUndefined();
+      expect(_get(result, ['anything'])).toBeUndefined();
     });
   });
 
@@ -203,14 +195,6 @@ describe('core', () => {
       const jpc = new JSONPC('{"a": 1}');
       const clean = jpc.toObject();
       expect(clean).toEqual({ a: 1 });
-    });
-
-    it('should produce clean JSON string via stringifyWithoutComment', () => {
-      const jpc = new JSONPC('{"a": 1}');
-      const str = jpc.stringifyWithoutComment();
-      expect(JSON.parse(str)).toEqual({ a: 1 });
-      const pretty = jpc.stringifyWithoutComment(null, 2);
-      expect(pretty).toBe(JSON.stringify({ a: 1 }, null, 2));
     });
 
     it('should throw on invalid JSON', () => {

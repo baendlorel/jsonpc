@@ -1,12 +1,11 @@
-import { WalkState, Walker, Side } from './walker.class.js';
+import { WalkState, createWorker, Side } from './walker.class.js';
 
 let chars: string[] = [];
 let state: WalkState = WalkState.Idle;
 
-const interpretNameWalker = new Walker('', {
-  start: 1,
+const interpretNameWalker = createWorker({
   inString: true,
-  onStringContent: ({ c }) => chars.push(c),
+  onInString: ({ c }) => chars.push(c),
   onQuote({ side }) {
     if (side === Side.Right) {
       state = WalkState.Start;
@@ -43,7 +42,7 @@ export function interpretName(line: string) {
   chars = [];
   state = WalkState.Idle;
 
-  interpretNameWalker.reset({ text: line, start: 1, inString: true }).run();
+  interpretNameWalker.reset({ text: line, inString: true }).run(1);
 
   if ((state as WalkState) !== WalkState.Found) {
     throw new Error(`Cannot find ending quote: ${line}`);

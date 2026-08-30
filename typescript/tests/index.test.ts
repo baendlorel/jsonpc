@@ -68,8 +68,7 @@ describe('JSONPC', () => {
     });
 
     it('should accept a reviver function (applied to initial parse)', () => {
-      const reviver = (_key: string, val: any) =>
-        typeof val === 'number' ? val * 2 : val;
+      const reviver = (_key: string, val: any) => (typeof val === 'number' ? val * 2 : val);
       // The reviver is applied to JSON.parse but then a second internal parse
       // happens, so the reviver effect may be overwritten.
       // At minimum, the constructor should not throw.
@@ -299,9 +298,7 @@ describe('JSONPC', () => {
 
     it('should support replacer to filter properties', () => {
       const jpc = new JSONPC('{"a": 1, "b": 2}');
-      const output = jpc.stringify((key: string, val: any) =>
-        key === 'a' ? undefined : val
-      );
+      const output = jpc.stringify((key: string, val: any) => (key === 'a' ? undefined : val));
       expect(output).not.toContain('"a"');
       expect(output).toContain('"b"');
     });
@@ -335,36 +332,6 @@ describe('JSONPC', () => {
       const obj = jpc.toObject();
       obj.a.b = 99;
       expect(jpc.get('a.b')?.value).toBe(768);
-    });
-  });
-
-  // ────────────────────────────────────────────
-  // stringifyWithoutComment
-  // ────────────────────────────────────────────
-  describe('stringifyWithoutComment', () => {
-    it('should return compact JSON without spaces', () => {
-      const jpc = new JSONPC('{"a": 1}');
-      const str = jpc.stringifyWithoutComment();
-      expect(JSON.parse(str)).toEqual({ a: 1 });
-    });
-
-    it('should return pretty-printed JSON with space param', () => {
-      const jpc = new JSONPC('{"a": 42}');
-      const pretty = jpc.stringifyWithoutComment(null, 2);
-      expect(pretty).toBe(JSON.stringify({ a: 42 }, null, 2));
-    });
-
-    it('should support replacer', () => {
-      const jpc = new JSONPC('{"a": 1, "b": 2}');
-      const replacer = (key: string, val: any) => (key === 'a' ? undefined : val);
-      const str = jpc.stringifyWithoutComment(replacer as any);
-      expect(JSON.parse(str)).toEqual({ b: 2 });
-    });
-
-    it('should return no comments', () => {
-      const jpc = new JSONPC(sampleText);
-      const str = jpc.stringifyWithoutComment();
-      expect(str).not.toContain('//');
     });
   });
 

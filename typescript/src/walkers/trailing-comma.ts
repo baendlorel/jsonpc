@@ -1,4 +1,4 @@
-import { WalkState, WalkerHandlerArgsWithSides, Side, Walker } from './walker.class.js';
+import { WalkState, WalkerHandlerArgsWithSides, Side, createWorker } from './walker.class.js';
 
 let lastCommaIndex = -1;
 let chars: (string | null)[] = [];
@@ -10,7 +10,7 @@ const onBrace = ({ side }: WalkerHandlerArgsWithSides) => {
   }
 };
 
-const stripTrailingCommasWalker = new Walker('', {
+const stripTrailingCommasWalker = createWorker({
   onComma({ i }) {
     state = WalkState.Start;
     lastCommaIndex = i;
