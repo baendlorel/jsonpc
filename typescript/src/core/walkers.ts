@@ -7,51 +7,96 @@ const enum WalkState {
   Found,
 }
 
+let interpretNameChars: string[] = [];
+let interpretNameState: WalkState = WalkState.Idle;
+
+const interpretNameWalker = new Walker('', {
+  start: 1,
+  inString: true,
+  onStringContent: ({ c }) => interpretNameChars.push(c),
+  onQuote({ side }) {
+    if (side === Side.Right) {
+      interpretNameState = WalkState.Start;
+    }
+  },
+  afterChar({ c, t }, stop) {
+    switch (interpretNameState) {
+      case WalkState.Idle:
+        break;
+      case WalkState.Start:
+        interpretNameState = WalkState.Searching;
+        break;
+      case WalkState.Searching:
+        if (c === ':') {
+          interpretNameState = WalkState.Found;
+          stop();
+          return;
+        } else if (c.trim() !== '') {
+          throw new Error(`Unexpected character after property name: ${t}`);
+        }
+        break;
+      case WalkState.Found: // This won't happen, but just in case.
+        stop();
+        break;
+    }
+  },
+});
+
 export function interpretName(line: string) {
   if (line[0] !== '"') {
     throw new Error(`Comments are only allowed directly above property names`);
   }
-  const chars: string[] = [];
-  let state = WalkState.Idle;
 
-  new Walker(line, {
-    start: 1,
-    inString: true,
-    onStringContent: ({ c }) => chars.push(c),
-    onQuote({ side }) {
-      if (side === Side.Right) {
-        state = WalkState.Start;
-      }
-    },
-    afterChar({ c }, stop) {
-      switch (state) {
-        case WalkState.Idle:
-          break;
-        case WalkState.Start:
-          state = WalkState.Searching;
-          break;
-        case WalkState.Searching:
-          if (c === ':') {
-            state = WalkState.Found;
-            stop();
-            return;
-          } else if (c.trim() !== '') {
-            throw new Error(`Unexpected character after property name: ${line}`);
-          }
-          break;
-        case WalkState.Found: // This won't happen, but just in case.
-          stop();
-          break;
-      }
-    },
-  }).run();
+  interpretNameWalker.reset({ text: line, start: 1, inString: true }).run();
 
-  if ((state as WalkState) !== WalkState.Found) {
+  if (interpretNameState !== WalkState.Found) {
     throw new Error(`Cannot find ending quote: ${line}`);
   }
 
-  return chars.join('');
+  const result = interpretNameChars.join('');
+
+  // Reset for next use
+  interpretNameChars = [];
+  interpretNameState = WalkState.Idle;
+
+  return result;
 }
+
+let lastCommaIndex = -1;
+let stripTrailingCommasChars: (string | null)[] = [];
+let stripTrailingCommasState: WalkState = WalkState.Idle;
+const onBrace = ({ side }: WalkerHandlerArgsWithSides) => {
+  if (side === Side.Right && stripTrailingCommasState === WalkState.Searching) {
+    stripTrailingCommasState = WalkState.Found;
+  }
+};
+
+const stripTrailingCommasWalker = new Walker('', {
+  onComma({ i }) {
+    stripTrailingCommasState = WalkState.Start;
+    lastCommaIndex = i;
+  },
+  onBrace,
+  onBracket: onBrace,
+  afterChar({ c }) {
+    switch (stripTrailingCommasState) {
+      case WalkState.Idle:
+        break;
+      case WalkState.Start:
+        stripTrailingCommasState = WalkState.Searching;
+        break;
+      case WalkState.Searching:
+        if (c.trim() !== '') {
+          stripTrailingCommasState = WalkState.Idle;
+        }
+        break;
+      case WalkState.Found:
+        stripTrailingCommasState = WalkState.Idle;
+        stripTrailingCommasChars[lastCommaIndex] = null;
+        break;
+    }
+  },
+});
 
 /**
  * Scan the whole text, and remove trailing commas.
@@ -64,41 +109,9 @@ export function interpretName(line: string) {
 export function stripTrailingCommas(text: string) {
   const chars: (string | null)[] = text.split('');
 
-  let lastCommaIndex = -1;
   let state: WalkState = WalkState.Idle;
 
-  const onBrace = ({ side }: WalkerHandlerArgsWithSides) => {
-    if (side === Side.Right && state === WalkState.Searching) {
-      state = WalkState.Found;
-    }
-  };
-
-  new Walker(text, {
-    onComma({ i }) {
-      state = WalkState.Start;
-      lastCommaIndex = i;
-    },
-    onBrace,
-    onBracket: onBrace,
-    afterChar({ c }) {
-      switch (state) {
-        case WalkState.Idle:
-          break;
-        case WalkState.Start:
-          state = WalkState.Searching;
-          break;
-        case WalkState.Searching:
-          if (c.trim() !== '') {
-            state = WalkState.Idle;
-          }
-          break;
-        case WalkState.Found:
-          state = WalkState.Idle;
-          chars[lastCommaIndex] = null;
-          break;
-      }
-    },
-  });
+  stripTrailingCommasWalker.reset({ text }).run();
 
   return chars.filter((c) => c !== null).join('');
 }
