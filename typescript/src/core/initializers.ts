@@ -91,7 +91,7 @@ export function visit(o: any, unames: Map<string, string>, path: string[] = [], 
  * @param path current property path (string[]) for comment lookup
  */
 export function serialize(
-  commentMap: any,
+  comments: any,
   obj: any,
   pad: number,
   replacer: ((this: any, key: string, value: any) => any) | (number | string)[] | null,
@@ -123,7 +123,7 @@ export function serialize(
 
     for (let i = 0; i < obj.length; i++) {
       const val = typeof replacer === 'function' ? replacer.call(obj, String(i), obj[i]) : obj[i];
-      serialize(commentMap, val, pad, replacer, depth + 1, path.concat(String(i)), lines);
+      serialize(comments, val, pad, replacer, depth + 1, path.concat(String(i)), lines);
 
       // * trailing comma for array elements
       lines[lines.length - 1] += ',';
@@ -190,7 +190,7 @@ export function serialize(
     const { key, val, propPath } = active[i];
 
     // Emit comments before this property
-    _get(commentMap, propPath)?.forEach((c: string) => lines.push(`${indent}${COMMENT_PREFIX} ${c}`));
+    _get(comments, propPath)?.forEach((c: string) => lines.push(`${indent}${COMMENT_PREFIX} ${c}`));
 
     // Emit the property key
     const keyLine = `${indent}"${key}": `;
@@ -201,7 +201,7 @@ export function serialize(
     if (!isObj) {
       lines[lines.length - 1] += JSON.stringify(val, replacer as any, pad);
     } else {
-      serialize(commentMap, val, pad, replacer, depth + 1, propPath, lines);
+      serialize(comments, val, pad, replacer, depth + 1, propPath, lines);
     }
 
     // * trailing comma for array elements

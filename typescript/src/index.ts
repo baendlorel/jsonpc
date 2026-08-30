@@ -2,7 +2,7 @@ import { aggregate, mark, visit, serialize } from './core/initializers.js';
 import { _isArray, _notComment, _split, _stripPrefix } from './core/common.js';
 import { arrayOpers, SupportedArrayMethods } from './core/array.js';
 import { stripTrailingCommas } from './walkers/trailing-comma.js';
-import { _set, _delete, _get, Null } from './core/path-map.js';
+import { _set, _delete, _get } from './core/path-map.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
   (globalThis as any).COMMENT_PREFIX = '//';
@@ -99,7 +99,7 @@ export class JSONPC {
   get(propPath: string | string[]): Entry | undefined {
     const k = _split(propPath);
     const v = _get(this.data, k);
-    return v === Null ? undefined : { value: v, comments: _get(this.comments, k) };
+    return v === undefined ? undefined : { value: v, comments: _get(this.comments, k) };
   }
 
   /**

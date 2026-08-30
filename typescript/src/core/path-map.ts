@@ -10,12 +10,12 @@ export const _set = (obj: any, path: string[], value: any): void => {
   current[path[path.length - 1]] = value;
 };
 
-export const Null = Symbol();
+// TODO 这可能没有必要，因为JSON标准的不支持undefined
 export const _get = (obj: any, path: string[]): any => {
   let current = obj;
   for (const key of path) {
     if (!(key in current)) {
-      return Null;
+      return undefined;
     }
     current = current[key];
   }
