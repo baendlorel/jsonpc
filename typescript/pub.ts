@@ -29,8 +29,12 @@ pkg.version = new Version(pkg.version).bump().toString();
 
 writeFileSync(join(import.meta.dirname, 'package.json'), JSON.stringify(pkg, null, 2) + '\n', 'utf-8');
 
-const readme = readFileSync(join(import.meta.dirname, '..', 'README.md'));
-writeFileSync(join(import.meta.dirname, 'README.md'), readme, 'utf-8');
+const readme = readFileSync(join(import.meta.dirname, '..', 'README.md'), 'utf-8');
+writeFileSync(
+  join(import.meta.dirname, 'README.md'),
+  readme.replace(`src="./assets/jsonpc.png"`, `src="../assets/jsonpc.png"`),
+  'utf-8',
+);
 
 execSync(`pnpm build`, { cwd: import.meta.dirname });
 execSync(`npm publish`, { cwd: import.meta.dirname });

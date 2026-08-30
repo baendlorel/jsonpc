@@ -1,5 +1,7 @@
 <div align="center">
-# jsonpc
+
+<img style="display:block;margin:auto" src="./assets/jsonpc.png" alt="jsonpc logo" width="480"/>
+
 
 **JSON with Property Comments** — A lightweight JSON variant that allows single-line comments `//` and trailing commas in JSON files.
   
@@ -170,9 +172,9 @@ The `updateArray` method supports these array operations:
 
 | Solution   | Custom Parser | Arbitrary Position Comments | Trailing Commas | Size   |
 | ---------- | ------------- | --------------------------- | --------------- | ------ |
-| **jsonpc** | ❌             | ❌                           | ✅               | Small  |
-| json5      | ✅             | ✅                           | ✅               | Large  |
-| JSONC      | ✅             | ✅                           | ❌               | Medium |
+| **jsonpc** | ❌            | ❌                          | ✅              | Small  |
+| json5      | ✅            | ✅                          | ✅              | Large  |
+| JSONC      | ✅            | ✅                          | ❌              | Medium |
 
 jsonpc trades some flexibility for simplicity and performance.
 
