@@ -64,6 +64,10 @@ _Other positions and block comments are not allowed._
 ### Read and set values and comments
 
 ```ts
+import { parse } from 'jsonpc-ts';
+
+const jsonpc = parse(text);
+
 // Get both value and comments for a property path
 const entry = jsonpc.get('profile');
 // → { value: { age: 25 }, comments: ['// Nested object comment'] }
@@ -111,18 +115,17 @@ jsonpc.updateArray('items', 'reverse', []);         // Reverse
 
 ```ts
 // Get top-level file comments
-const topComments = jsonpc.topComments;
-// → ['// Top comment 1', '// Top comment 2']
+const topComments = jsonpc.top;
+
 
 // Get bottom-level file comments  
-const bottomComments = jsonpc.bottomComments;
-// → ['// Bottom comment']
+const bottomComments = jsonpc.bottom;
 
 // Set top-level comments
-jsonpc.topComments = ['// New top comment'];
+jsonpc.top = ['New top comment'];
 
 // Set bottom-level comments
-jsonpc.bottomComments = ['// New bottom comment'];
+jsonpc.bottom = ['New bottom comment'];
 ```
 
 ### Serialization
@@ -134,46 +137,33 @@ const output = jsonpc.stringify();
 // Custom indentation and replacer
 const custom = jsonpc.stringify(null, 4);
 
+// Or use the standalone stringify function
+const output = stringify(jsonpc);
+
 // Get clean JSON object without comments
 const clean = jsonpc.toObject();
-
-// Get standard JSON string (no comments)
-const jsonString = jsonpc.stringifyWithoutComment(null, 2);
 ```
 
-## API
-
-### `parse(text: string, reviver?): JSONPC`
-
-Parse a JSON string with comments.
-
-```ts
-const jsonpc = parse(text, (key, value) => {
-  // Optional reviver function, same as JSON.parse
-  return value;
-});
-```
 
 ### `class JSONPC`
 
 #### Properties
 
-| Property         | Type       | Description                        |
-| ---------------- | ---------- | ---------------------------------- |
-| `topComments`    | `string[]` | Get/set top-level file comments    |
-| `bottomComments` | `string[]` | Get/set bottom-level file comments |
+| Property | Type       | Description                        |
+| -------- | ---------- | ---------------------------------- |
+| `top`    | `string[]` | Get/set top-level file comments    |
+| `bottom` | `string[]` | Get/set bottom-level file comments |
 
 #### Methods
 
-| Method                                           | Description                                   |
-| ------------------------------------------------ | --------------------------------------------- |
-| `get(path: string): Entry \| undefined`          | Get entry with value and comments             |
-| `set(path: string, entry: Partial<Entry>): this` | Set value and/or comments                     |
-| `updateArray(path, method, args): this`          | Execute array operations                      |
-| `stringify(replacer?, space?): string`           | Serialize to JSON text with comments          |
-| `toObject<T>(): T`                               | Return a pure JavaScript object (no comments) |
-| `stringifyWithoutComment(...args): string`       | Return standard JSON string (no comments)     |
-| `destroy(): void`                                | Clean up internal references                  |
+| Method                                                       | Description                                   |
+| ------------------------------------------------------------ | --------------------------------------------- |
+| `get(path: string \| string[]): Entry \| undefined`          | Get entry with value and comments             |
+| `set(path: string \| string[], entry: Partial<Entry>): this` | Set value and/or comments                     |
+| `updateArray(path, method, args): this`                      | Execute array operations                      |
+| `stringify(replacer?, space?): string`                       | Serialize to JSON text with comments          |
+| `toObject<T>(): T`                                           | Return a pure JavaScript object (no comments) |
+| `destroy(): void`                                            | Clean up internal references                  |
 
 #### Type Definitions
 
@@ -186,13 +176,16 @@ interface Entry {
 
 #### Property Path Format
 
-Use dot-separated path strings:
+Use dot-separated path strings or string arrays:
 
 ```ts
 "objectName"          // Top-level property
 "nested.prop"         // Nested property
 "items.0"             // Array element
 "users.1.name"        // Object property in nested array
+
+// Or use array syntax
+['users', 1, 'name']  // Same as above
 ```
 
 #### Supported Array Methods

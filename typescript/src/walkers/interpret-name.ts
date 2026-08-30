@@ -34,18 +34,18 @@ const interpretNameWalker = createWorker({
   },
 });
 
-export function interpretName(line: string) {
-  if (line[0] !== '"') {
+export function interpretName(text: string) {
+  if (text[0] !== '"') {
     throw new Error(`Comments are only allowed directly above property names`);
   }
   // Reset for next use
   chars = [];
   state = WalkState.Idle;
 
-  interpretNameWalker.reset({ text: line, inString: true }).run(1);
+  interpretNameWalker.reset({ text, inString: true }).run(1);
 
   if ((state as WalkState) !== WalkState.Found) {
-    throw new Error(`Cannot find ending quote: ${line}`);
+    throw new Error(`Cannot find ending quote: ${text}`);
   }
 
   return chars.join('');

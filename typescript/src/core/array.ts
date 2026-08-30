@@ -67,7 +67,7 @@ const splice: Operations['splice'] = (arr, args, commentsMap, path) => {
     _delete(commentsMap, [...path, start + i]);
   }
 
-  arr.splice.apply(arr, args);
+  arr.splice(...args);
 };
 
 const reverse: Operations['reverse'] = (arr, _args, commentsMap, path) => {
