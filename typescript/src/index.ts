@@ -1,8 +1,7 @@
 import { get as _get, set as _set, has as _has, deleteProperty as _delete } from 'reflect-deep';
 import {
-  isComment,
   trim,
-  stripTopBottom,
+  notComment,
   aggregate,
   stripPrefix,
   mark,
@@ -10,6 +9,7 @@ import {
   clone,
   serialize,
   split,
+  stripTrailingCommas,
 } from './core.js';
 import { _isArray, _mustArray } from './common.js';
 import { arrayOpers, getArray, SupportedArrayMethods } from './array.js';
@@ -40,8 +40,8 @@ export class JSONPC {
    */
   constructor(text: string, reviver?: (this: any, key: string, value: any) => any) {
     const lines = trim(text);
-    const withoutComments = lines.filter((v) => !isComment(v));
-    const rawJson = withoutComments.join('');
+    const withoutComments = lines.filter(notComment);
+    const rawJson = stripTrailingCommas(withoutComments.join(''));
     try {
       this.data = reviver ? JSON.parse(rawJson, reviver) : JSON.parse(rawJson);
     } catch (e) {
@@ -51,18 +51,18 @@ export class JSONPC {
     // & Now the json is some how valid.
 
     // Fill the whole file level comments
-    const stripIndex = stripTopBottom(lines);
-    if (!Number.isNaN(stripIndex.bottom)) {
-      this.bottom = lines.splice(stripIndex.bottom).map(stripPrefix); //! Must be done first, or indexes will change.
+    // TODO 没有更简单的写法了吗
+    const itop = lines.findIndex(notComment) - 1;
+    const ibottom = lines.length - lines.concat().reverse().findIndex(notComment);
+    if (ibottom <= lines.length - 1) {
+      this.bottom = lines.splice(ibottom).map(stripPrefix); //! Must be done first, or indexes will change.
     }
-    if (!Number.isNaN(stripIndex.top)) {
-      this.top = lines.splice(0, stripIndex.top + 1).map(stripPrefix);
+    if (itop >= 0) {
+      this.top = lines.splice(0, itop + 1).map(stripPrefix);
     }
 
-    const aggregated = aggregate(lines);
-    const named = mark(aggregated);
+    const named = mark(aggregate(lines));
     this.data = JSON.parse(named.lines.join(''));
-    // visit stores comment arrays in commentMap keyed by property path, and deletes uuid keys from data
     this.commentMap = visit(this.data, named.unames);
   }
 

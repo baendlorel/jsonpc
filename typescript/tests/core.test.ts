@@ -13,6 +13,17 @@ import {
 import { JSONPC } from '../src/index.js';
 import { ReflectDeep } from 'reflect-deep';
 
+// Helper function to set comments for a property path
+function setComments(jpc: JSONPC, path: string, comments: string[]): void {
+  const current = jpc.get(path);
+  jpc.set(path, { value: current?.value, comments });
+}
+
+// Helper function to get comments for a property path
+function getComments(jpc: JSONPC, path: string): string[] | undefined {
+  return jpc.get(path)?.comments;
+}
+
 describe('core', () => {
   describe('isComment', () => {
     it('should return true for // lines', () => {
@@ -246,35 +257,35 @@ describe('core', () => {
 
     it('should get comments for a property', () => {
       const jpc = new JSONPC(sampleText);
-      const comments = jpc.getComments('ddd');
+      const comments = getComments(jpc, 'ddd');
       expect(comments).toEqual(['Comment for ddd']);
     });
 
     it('should return undefined for properties without comments', () => {
       const jpc = new JSONPC(sampleText);
-      expect(jpc.getComments('nested')).toBeUndefined();
-      expect(jpc.getComments('nonexistent')).toBeUndefined();
+      expect(getComments(jpc, 'nested')).toBeUndefined();
+      expect(getComments(jpc, 'nonexistent')).toBeUndefined();
     });
 
     it('should set comments for an existing property', () => {
       const jpc = new JSONPC(sampleText);
-      jpc.setComments('ddd', ['Updated comment']);
-      expect(jpc.getComments('ddd')).toEqual(['Updated comment']);
+      setComments(jpc, 'ddd', ['Updated comment']);
+      expect(getComments(jpc, 'ddd')).toEqual(['Updated comment']);
     });
 
     it('should set comments for a new property path', () => {
       const jpc = new JSONPC('{"x": 1}');
-      jpc.setComments('x', ['New comment']);
-      expect(jpc.getComments('x')).toEqual(['New comment']);
+      setComments(jpc, 'x', ['New comment']);
+      expect(getComments(jpc, 'x')).toEqual(['New comment']);
     });
 
     it('should get and set values', () => {
       const jpc = new JSONPC('{"a": {"b": 1}}');
-      expect(jpc.get('a.b')).toBe(1);
-      expect(jpc.get('nonexistent', 'default')).toBe('default');
+      expect(jpc.get('a.b')?.value).toBe(1);
+      expect(jpc.get('nonexistent')).toBeUndefined();
 
-      jpc.set('a.b', 42);
-      expect(jpc.get('a.b')).toBe(42);
+      jpc.set('a.b', { value: 42 });
+      expect(jpc.get('a.b')?.value).toBe(42);
     });
 
     it('should produce clean object via toObject', () => {
@@ -297,8 +308,8 @@ describe('core', () => {
 
     it('should handle a simple object with no comments', () => {
       const jpc = new JSONPC('{"x": 1, "y": {"z": 2}}');
-      expect(jpc.get('x')).toBe(1);
-      expect(jpc.get('y.z')).toBe(2);
+      expect(jpc.get('x')?.value).toBe(1);
+      expect(jpc.get('y.z')?.value).toBe(2);
       expect(jpc.toObject()).toEqual({ x: 1, y: { z: 2 } });
     });
   });

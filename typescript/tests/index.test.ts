@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { JSONPC, parse, stringify } from '../src/index.js';
 
+// Helper function to set comments for a property path
+function setComments(jpc: JSONPC, path: string, comments: string[]): void {
+  const current = jpc.get(path);
+  jpc.set(path, { value: current?.value, comments });
+}
+
+// Helper function to get comments for a property path
+function getComments(jpc: JSONPC, path: string): string[] | undefined {
+  return jpc.get(path)?.comments;
+}
+
 const sampleText = `
 // Top comment 1
 // Top comment 2
@@ -41,19 +52,19 @@ describe('JSONPC', () => {
 
     it('should handle object with no comments', () => {
       const jpc = new JSONPC('{"x": 561, "y": 789}');
-      expect(jpc.get('x')).toBe(561);
-      expect(jpc.get('y')).toBe(789);
+      expect(jpc.get('x')?.value).toBe(561);
+      expect(jpc.get('y')?.value).toBe(789);
     });
 
     it('should handle nested object with no comments', () => {
       const jpc = new JSONPC('{"a": {"b": {"c": 561}}}');
-      expect(jpc.get('a.b.c')).toBe(561);
+      expect(jpc.get('a.b.c')?.value).toBe(561);
     });
 
     it('should handle array at root', () => {
       const jpc = new JSONPC('[1, 2, 3]');
-      expect(jpc.get('0')).toBe(1);
-      expect(jpc.get('2')).toBe(3);
+      expect(jpc.get('0')?.value).toBe(1);
+      expect(jpc.get('2')?.value).toBe(3);
     });
 
     it('should accept a reviver function (applied to initial parse)', () => {
@@ -102,7 +113,7 @@ describe('JSONPC', () => {
       const output = jpc.stringify();
       expect(output).not.toContain('// Top comment');
       expect(output).toContain('// comment');
-      expect(jpc.get('x')).toBe(1);
+      expect(jpc.get('x')?.value).toBe(1);
     });
 
     it('should work without bottom comments', () => {
@@ -113,7 +124,7 @@ describe('JSONPC', () => {
       const jpc = new JSONPC(text);
       const output = jpc.stringify();
       expect(output).toContain('// top');
-      expect(jpc.get('x')).toBe(984);
+      expect(jpc.get('x')?.value).toBe(984);
     });
   });
 
@@ -123,18 +134,18 @@ describe('JSONPC', () => {
   describe('getComments', () => {
     it('should get comment for a property', () => {
       const jpc = new JSONPC(sampleText);
-      expect(jpc.getComments('ddd')).toEqual(['Comment for ddd']);
+      expect(getComments(jpc, 'ddd')).toEqual(['Comment for ddd']);
     });
 
     it('should return undefined for properties without comments', () => {
       const jpc = new JSONPC(sampleText);
-      expect(jpc.getComments('nested')).toBeUndefined();
-      expect(jpc.getComments('nonexistent')).toBeUndefined();
+      expect(getComments(jpc, 'nested')).toBeUndefined();
+      expect(getComments(jpc, 'nonexistent')).toBeUndefined();
     });
 
     it('should return undefined for nested properties without comments', () => {
       const jpc = new JSONPC(sampleText);
-      expect(jpc.getComments('nested.x')).toBeUndefined();
+      expect(getComments(jpc, 'nested.x')).toBeUndefined();
     });
 
     it('should get comments for nested property', () => {
@@ -145,7 +156,7 @@ describe('JSONPC', () => {
   }
 }`;
       const jpc = new JSONPC(text);
-      expect(jpc.getComments('a.b')).toEqual(['comment for b']);
+      expect(getComments(jpc, 'a.b')).toEqual(['comment for b']);
     });
 
     it('should get multi-line comments', () => {
@@ -155,13 +166,13 @@ describe('JSONPC', () => {
   "x": 1
 }`;
       const jpc = new JSONPC(text);
-      expect(jpc.getComments('x')).toEqual(['line 1', 'line 2']);
+      expect(getComments(jpc, 'x')).toEqual(['line 1', 'line 2']);
     });
 
     it('should return undefined for non-existent path', () => {
       const jpc = new JSONPC('{"a": 1}');
-      expect(jpc.getComments('a')).toBeUndefined();
-      expect(jpc.getComments('b')).toBeUndefined();
+      expect(getComments(jpc, 'a')).toBeUndefined();
+      expect(getComments(jpc, 'b')).toBeUndefined();
     });
 
     it('should get comments for deeply nested property', () => {
@@ -174,7 +185,7 @@ describe('JSONPC', () => {
   }
 }`;
       const jpc = new JSONPC(text);
-      expect(jpc.getComments('a.b.c')).toEqual(['deep comment']);
+      expect(getComments(jpc, 'a.b.c')).toEqual(['deep comment']);
     });
   });
 
@@ -184,26 +195,26 @@ describe('JSONPC', () => {
   describe('setComments', () => {
     it('should set comments for an existing property', () => {
       const jpc = new JSONPC(sampleText);
-      jpc.setComments('ddd', ['Updated comment']);
-      expect(jpc.getComments('ddd')).toEqual(['Updated comment']);
+      setComments(jpc, 'ddd', ['Updated comment']);
+      expect(getComments(jpc, 'ddd')).toEqual(['Updated comment']);
     });
 
     it('should set comments for a new property path', () => {
       const jpc = new JSONPC('{"x": 893}');
-      jpc.setComments('x', ['New comment']);
-      expect(jpc.getComments('x')).toEqual(['New comment']);
+      setComments(jpc, 'x', ['New comment']);
+      expect(getComments(jpc, 'x')).toEqual(['New comment']);
     });
 
     it('should set comments for nested property', () => {
       const jpc = new JSONPC('{"a": {"b": 611}}');
-      jpc.setComments('a.b', ['nested comment']);
-      expect(jpc.getComments('a.b')).toEqual(['nested comment']);
+      setComments(jpc, 'a.b', ['nested comment']);
+      expect(getComments(jpc, 'a.b')).toEqual(['nested comment']);
     });
 
     it('should set multi-line comments', () => {
       const jpc = new JSONPC('{"x": 1}');
-      jpc.setComments('x', ['line 1', 'line 2']);
-      expect(jpc.getComments('x')).toEqual(['line 1', 'line 2']);
+      setComments(jpc, 'x', ['line 1', 'line 2']);
+      expect(getComments(jpc, 'x')).toEqual(['line 1', 'line 2']);
     });
 
     it('should throw for non-array comments argument', () => {
@@ -218,47 +229,42 @@ describe('JSONPC', () => {
   describe('get / set', () => {
     it('should get top-level property', () => {
       const jpc = new JSONPC('{"a": 1}');
-      expect(jpc.get('a')).toBe(1);
+      expect(jpc.get('a')?.value).toBe(1);
     });
 
     it('should get nested property', () => {
       const jpc = new JSONPC('{"a": {"b": 2}}');
-      expect(jpc.get('a.b')).toBe(2);
+      expect(jpc.get('a.b')?.value).toBe(2);
     });
 
-    it('should return default value for non-existent path', () => {
-      const jpc = new JSONPC('{"a": 1}');
-      expect(jpc.get('b', 'default')).toBe('default');
-    });
-
-    it('should return undefined for non-existent path without default', () => {
+    it('should return undefined for non-existent path', () => {
       const jpc = new JSONPC('{"a": 1}');
       expect(jpc.get('b')).toBeUndefined();
     });
 
     it('should set top-level property', () => {
       const jpc = new JSONPC('{"a": 969}');
-      jpc.set('a', 42);
-      expect(jpc.get('a')).toBe(42);
+      jpc.set('a', { value: 42 });
+      expect(jpc.get('a')?.value).toBe(42);
     });
 
     it('should set nested property', () => {
       const jpc = new JSONPC('{"a": {"b": 1}}');
-      jpc.set('a.b', 42);
-      expect(jpc.get('a.b')).toBe(42);
+      jpc.set('a.b', { value: 42 });
+      expect(jpc.get('a.b')?.value).toBe(42);
     });
 
     it('should set new property', () => {
       const jpc = new JSONPC('{"a": 893}');
-      jpc.set('b', 974);
-      expect(jpc.get('b')).toBe(974);
+      jpc.set('b', { value: 974 });
+      expect(jpc.get('b')?.value).toBe(974);
     });
 
     it('should support chaining', () => {
       const jpc = new JSONPC('{"a": 1}');
-      jpc.set('a', 2).set('b', 3);
-      expect(jpc.get('a')).toBe(2);
-      expect(jpc.get('b')).toBe(3);
+      jpc.set('a', { value: 2 }).set('b', { value: 3 });
+      expect(jpc.get('a')?.value).toBe(2);
+      expect(jpc.get('b')?.value).toBe(3);
     });
   });
 
@@ -283,8 +289,8 @@ describe('JSONPC', () => {
 
     it('should stringify after data modifications', () => {
       const jpc = new JSONPC('{"x": 1}');
-      jpc.set('x', 42);
-      jpc.setComments('x', ['comment with quotes: "hello"']);
+      jpc.set('x', { value: 42 });
+      setComments(jpc, 'x', ['comment with quotes: "hello"']);
       const output = jpc.stringify();
       expect(output).toContain('// comment with quotes: "hello"');
       expect(output).toContain('42');
@@ -321,14 +327,14 @@ describe('JSONPC', () => {
     it('should not include comment metadata', () => {
       const jpc = new JSONPC('{"a": 1}');
       const obj = jpc.toObject();
-      expect(obj).not.toHaveProperty('commentMap');
+      expect(obj).not.toHaveProperty('comments');
     });
 
     it('should return a deep clone', () => {
       const jpc = new JSONPC('{"a": {"b": 768}}');
       const obj = jpc.toObject();
       obj.a.b = 99;
-      expect(jpc.get('a.b')).toBe(768);
+      expect(jpc.get('a.b')?.value).toBe(768);
     });
   });
 
@@ -369,12 +375,12 @@ describe('JSONPC', () => {
     it('parse should return a JSONPC instance', () => {
       const jpc = parse('{"a": 42}');
       expect(jpc).toBeInstanceOf(JSONPC);
-      expect(jpc.get('a')).toBe(42);
+      expect(jpc.get('a')?.value).toBe(42);
     });
 
     it('stringify should delegate to JSONPC.stringify', () => {
       const jpc = parse('{"a": 42}');
-      jpc.setComments('a', ['hello']);
+      setComments(jpc, 'a', ['hello']);
       const result = stringify(jpc);
       expect(result).toContain('// hello');
       expect(result).toContain('"a"');
@@ -393,10 +399,10 @@ describe('JSONPC', () => {
   "b": 2
 }`;
       const jpc = new JSONPC(text);
-      expect(jpc.getComments('a')).toEqual(['a comment']);
-      expect(jpc.getComments('b')).toEqual(['b comment']);
-      expect(jpc.get('a')).toBe(1);
-      expect(jpc.get('b')).toBe(2);
+      expect(getComments(jpc, 'a')).toEqual(['a comment']);
+      expect(getComments(jpc, 'b')).toEqual(['b comment']);
+      expect(jpc.get('a')?.value).toBe(1);
+      expect(jpc.get('b')?.value).toBe(2);
     });
 
     it('should handle special characters in comments', () => {
@@ -405,8 +411,8 @@ describe('JSONPC', () => {
   "x": 42
 }`;
       const jpc = new JSONPC(text);
-      expect(jpc.getComments('x')).toEqual(['comment with quotes: "hello"']);
-      expect(jpc.get('x')).toBe(42);
+      expect(getComments(jpc, 'x')).toEqual(['comment with quotes: "hello"']);
+      expect(jpc.get('x')?.value).toBe(42);
     });
 
     it('should strip all leading whitespace after // prefix', () => {
@@ -416,8 +422,8 @@ describe('JSONPC', () => {
 }`;
       const jpc = new JSONPC(text);
       // stripPrefix removes `//` then trims, so "  comment with two spaces" -> "comment with two spaces"
-      expect(jpc.getComments('x')).toEqual(['comment with two spaces']);
-      expect(jpc.get('x')).toBe(42);
+      expect(getComments(jpc, 'x')).toEqual(['comment with two spaces']);
+      expect(jpc.get('x')?.value).toBe(42);
     });
 
     it('should handle // only (empty comment)', () => {
@@ -426,8 +432,8 @@ describe('JSONPC', () => {
   "x": 42
 }`;
       const jpc = new JSONPC(text);
-      expect(jpc.getComments('x')).toEqual(['']);
-      expect(jpc.get('x')).toBe(42);
+      expect(getComments(jpc, 'x')).toEqual(['']);
+      expect(jpc.get('x')?.value).toBe(42);
     });
 
     it('should handle object with comments on multiple levels', () => {
@@ -440,36 +446,36 @@ describe('JSONPC', () => {
   }
 }`;
       const jpc = new JSONPC(text);
-      expect(jpc.getComments('a')).toEqual(['top-level comment']);
-      expect(jpc.getComments('b.c')).toEqual(['nested comment']);
-      expect(jpc.get('a')).toBe(42);
-      expect(jpc.get('b.c')).toBe(99);
+      expect(getComments(jpc, 'a')).toEqual(['top-level comment']);
+      expect(getComments(jpc, 'b.c')).toEqual(['nested comment']);
+      expect(jpc.get('a')?.value).toBe(42);
+      expect(jpc.get('b.c')?.value).toBe(99);
     });
 
     it('should handle large number', () => {
       const jpc = new JSONPC('{"n": 999999999}');
-      expect(jpc.get('n')).toBe(999999999);
+      expect(jpc.get('n')?.value).toBe(999999999);
     });
 
     it('should handle negative number', () => {
       const jpc = new JSONPC('{"n": -42}');
-      expect(jpc.get('n')).toBe(-42);
+      expect(jpc.get('n')?.value).toBe(-42);
     });
 
     it('should handle floating point number', () => {
       const jpc = new JSONPC('{"n": 3.14}');
-      expect(jpc.get('n')).toBe(3.14);
+      expect(jpc.get('n')?.value).toBe(3.14);
     });
 
     it('should handle boolean values', () => {
       const jpc = new JSONPC('{"a": true, "b": false}');
-      expect(jpc.get('a')).toBe(true);
-      expect(jpc.get('b')).toBe(false);
+      expect(jpc.get('a')?.value).toBe(true);
+      expect(jpc.get('b')?.value).toBe(false);
     });
 
     it('should handle null value', () => {
       const jpc = new JSONPC('{"a": null}');
-      expect(jpc.get('a')).toBeNull();
+      expect(jpc.get('a')?.value).toBeNull();
     });
 
     it('should handle deeply nested property', () => {
@@ -483,7 +489,7 @@ describe('JSONPC', () => {
   }
 }`;
       const jpc = new JSONPC(text);
-      expect(jpc.get('a.b.c.d')).toBe(42);
+      expect(jpc.get('a.b.c.d')?.value).toBe(42);
     });
   });
 });

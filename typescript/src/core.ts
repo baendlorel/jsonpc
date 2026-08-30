@@ -1,9 +1,7 @@
 import { get as _get, set as _set } from 'reflect-deep';
-import { _isArray, _keys } from './common.js';
+import { _isArray, _isSpace, _keys } from './common.js';
 
-export function isComment(t: string) {
-  return t.startsWith(COMMENT_PREFIX);
-}
+export const notComment = (t: string) => !t.startsWith(COMMENT_PREFIX);
 
 export function split(propPath: string | string[]): string[] {
   if (_isArray(propPath)) {
@@ -32,28 +30,6 @@ export function trim(text: string) {
     .filter((v) => v.length > 0);
 }
 
-export function stripTopBottom(lines: string[]) {
-  let top = NaN;
-  for (let i = 0; i < lines.length; i++) {
-    if (isComment(lines[i])) {
-      top = i;
-    } else {
-      break;
-    }
-  }
-
-  let bottom = NaN;
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if (isComment(lines[i])) {
-      bottom = i;
-    } else {
-      break;
-    }
-  }
-
-  return { top, bottom };
-}
-
 /**
  * Multiple comment lines will be collapsed into a string array.
  * Comment prefix `//` is stripped from each line.
@@ -62,23 +38,25 @@ export function aggregate(lines: string[]): Array<string | string[]> {
   const modified: Array<string | string[]> = [];
   let array: string[] = [];
   for (let i = 0; i < lines.length; i++) {
-    if (isComment(lines[i])) {
+    if (notComment(lines[i])) {
+      array = [];
+      modified.push(lines[i]);
+    } else {
       if (array.length === 0) {
         modified.push(array);
       }
       array.push(stripPrefix(lines[i]));
-    } else {
-      array = [];
-      modified.push(lines[i]);
     }
   }
 
   return modified;
 }
 
+// TODO 扫描器写了很多地方，是不是要直接写一个walker算了？
+
 function nextNonSpaceIsColon(line: string, start: number) {
   for (let i = start; i < line.length; i++) {
-    if (line[i] === ' ') {
+    if (_isSpace(line[i])) {
       continue;
     } else if (line[i] === ':') {
       return true;
@@ -167,7 +145,7 @@ export function stripTrailingCommas(text: string) {
     if (ch === '}' || ch === ']') {
       let j = i - 1;
       // ! chars[j] is definitely non-null for a valid json.
-      while (j >= 0 && /\s/.test(chars[j] as string)) {
+      while (j >= 0 && _isSpace(chars[j])) {
         j--;
       }
       if (j >= 0 && chars[j] === ',') {
@@ -355,17 +333,12 @@ export function serialize(
     lines[lines.length - 1] += `{`;
   }
 
+  const indent = ' '.repeat((depth + 1) * pad);
   for (let i = 0; i < active.length; i++) {
     const { key, val, propPath } = active[i];
-    const indent = ' '.repeat((depth + 1) * pad);
 
     // Emit comments before this property
-    const comments = _get(commentMap, propPath);
-    if (_isArray(comments)) {
-      for (let i = 0; i < comments.length; i++) {
-        lines.push(`${indent}${COMMENT_PREFIX} ${comments[i]}`);
-      }
-    }
+    _get(commentMap, propPath)?.forEach((c: string) => lines.push(`${indent}${COMMENT_PREFIX} ${c}`));
 
     // Emit the property key
     const keyLine = `${indent}"${key}": `;
