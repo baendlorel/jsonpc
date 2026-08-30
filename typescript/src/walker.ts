@@ -54,14 +54,20 @@ export function walk(text: string, handlers: Partial<WalkerOptions>) {
   } = handlers;
 
   let inString = false;
+  let escaped = false;
 
   for (let i = start; i < end; i++) {
     const c = text[i];
 
-    if (c === '\\') {
+    if (escaped) {
+      escaped = false;
+      onOther({ i });
+    } else if (c === '\\') {
+      if (!inString) {
+        throw new Error(`Unexpected escape character at position ${i} outside of a string.`);
+      }
+      escaped = true;
       onEscape({ i });
-      // ! This could only appear inside a string. So inString must be true here.
-      i++; // Skip the next character, as it's escaped
     } else if (inString) {
       if (c === '"') {
         inString = false;
