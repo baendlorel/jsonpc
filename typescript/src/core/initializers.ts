@@ -1,6 +1,6 @@
-import { get as _get, set as _set } from 'reflect-deep';
 import { _isArray, _keys, _notComment, _stripPrefix } from './common.js';
 import { interpretName } from '../walkers/interpret-name.js';
+import { _set, _get } from './path-map.js';
 
 /**
  * Multiple comment lines will be collapsed into a string array.

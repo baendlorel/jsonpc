@@ -1,5 +1,5 @@
-import { get as _get, deleteProperty as _delete } from 'reflect-deep';
-import { _isArray, _move, _exchange, _split } from './common.js';
+import { _isArray, _split } from './common.js';
+import { _get, _delete, _exchange, _move } from './path-map.js';
 
 export type ArrayMethods = {
   [K in keyof Array<any>]: Array<any>[K] extends Function ? K : never;
@@ -11,32 +11,22 @@ type Operations = {
 
 export type SupportedArrayMethods = 'push' | 'pop' | 'shift' | 'unshift' | 'splice' | 'reverse';
 
-export const getArray = (propPath: string | string[], data: any) => {
-  const k = _split(propPath);
-  const arr = _get(data, k);
-  if (!_isArray(arr)) {
-    throw new TypeError(`The property path "${propPath}" is not an array.`);
-  }
-  return { k, arr };
-};
+const push: Operations['push'] = (arr, args) => arr.push(...args);
 
-export const push: Operations['push'] = (arr, args) => arr.push(...args);
-
-export const pop: Operations['pop'] = (arr, _args, commentsMap, path) => (
+const pop: Operations['pop'] = (arr, _args, commentsMap, path) => (
   _delete(commentsMap, [...path, arr.length - 1]),
   arr.pop()
 );
 
-export const shift: Operations['shift'] = (arr, _args, commentsMap, path) => {
+const shift: Operations['shift'] = (arr, _args, commentsMap, path) => {
   const lastIndex = arr.length - 1;
   for (let i = 0; i < lastIndex; i++) {
     _move(commentsMap, [...path, i + 1], [...path, i]);
   }
-  _delete(commentsMap, [...path, lastIndex]);
   return arr.shift();
 };
 
-export const unshift: Operations['unshift'] = (arr, args, commentsMap, path) => {
+const unshift: Operations['unshift'] = (arr, args, commentsMap, path) => {
   const delta = args.length;
   for (let i = arr.length - 1; i >= 0; i--) {
     _move(commentsMap, [...path, i], [...path, i + delta]);
@@ -48,7 +38,7 @@ export const unshift: Operations['unshift'] = (arr, args, commentsMap, path) => 
   arr.unshift.apply(arr, args);
 };
 
-export const splice: Operations['splice'] = (arr, args, commentsMap, path) => {
+const splice: Operations['splice'] = (arr, args, commentsMap, path) => {
   const start = args[0] as number;
   const deleteCount = (args[1] as number) || 0;
   const insertCount = Math.max(0, args.length - 2);
@@ -80,9 +70,10 @@ export const splice: Operations['splice'] = (arr, args, commentsMap, path) => {
   arr.splice.apply(arr, args);
 };
 
-export const reverse: Operations['reverse'] = (arr, _args, commentsMap, path) => {
+const reverse: Operations['reverse'] = (arr, _args, commentsMap, path) => {
   const len = arr.length;
-  for (let i = 0; i < Math.floor(len / 2); i++) {
+  const half = Math.floor(len / 2);
+  for (let i = 0; i < half; i++) {
     _exchange(commentsMap, [...path, i], [...path, len - 1 - i]);
   }
   arr.reverse();
