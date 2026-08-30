@@ -10,11 +10,16 @@ import {
   serialize,
   split,
 } from './core.js';
-import { _isArray, _get, _set } from './common.js';
+import { _isArray, _get, _set, _has } from './common.js';
 import { arrayOpers, getArray, SupportedArrayMethods } from './array.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
   (globalThis as any).COMMENT_PREFIX = '//';
+}
+
+interface Entry {
+  value: any;
+  comments?: string[];
 }
 
 export class JSONPC {
@@ -60,72 +65,57 @@ export class JSONPC {
     this.commentMap = visit(this.data, named.unames);
   }
 
-  setTopComments(comments: string[]): this {
+  get topComments(): string[] {
+    return this.top;
+  }
+
+  get bottomComments(): string[] {
+    return this.bottom;
+  }
+
+  set topComments(comments: string[]) {
     if (!_isArray(comments)) {
-      throw new TypeError(`Invalid comments argument, must be an array of strings or a function.`);
+      throw new TypeError(`Invalid comments argument, must be an array of strings.`);
     }
-    this.top = [...comments];
-    return this;
+    this.top = comments;
   }
 
-  setBottomComments(comments: string[]): this {
+  set bottomComments(comments: string[]) {
     if (!_isArray(comments)) {
-      throw new TypeError(`Invalid comments argument, must be an array of strings or a function.`);
+      throw new TypeError(`Invalid comments argument, must be an array of strings.`);
     }
-    this.bottom = [...comments];
-    return this;
-  }
-
-  getTopComments(): string[] {
-    return [...this.top];
-  }
-
-  getBottomComments(): string[] {
-    return [...this.bottom];
+    this.bottom = comments;
   }
 
   /**
-   * Set comment for a property path.
+   * Set entry for a property path.
    * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
-   * @param comments comment content lines (without `//` prefix)
+   * @param entry Optional `value` and `comments` properties. Will set the provided ones.
    */
-  setComments(propPath: string | string[], comments: string[]): this {
-    if (!_isArray(comments)) {
-      throw new TypeError(`Invalid comments argument, must be an array of strings or a function.`);
-    }
+  set(propPath: string | string[], entry: Partial<Entry>): this {
     const k = split(propPath);
-    _set(this.commentMap, k, comments);
+    if ('value' in entry) {
+      _set(this.data, k, entry.value);
+    }
+    if ('comments' in entry) {
+      if (!_isArray(entry.comments)) {
+        throw new TypeError(`Invalid comments argument, must be an array of strings or a function.`);
+      }
+      _set(this.commentMap, k, entry.comments);
+    }
     return this;
   }
 
   /**
-   * Get comment for a property path.
-   * Return `undefined` if the property path does not exist.
+   * Get entry for a property path.
    * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
-   * @returns comment content lines (without `//` prefix), or `undefined`
    */
-  getComments(propPath: string | string[]): string[] | undefined {
-    return _get(this.commentMap, split(propPath));
-  }
-
-  /**
-   * Set value for a property path, creating the path if it does not exist.
-   * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
-   * @param value
-   */
-  set(propPath: string | string[], value: any): this {
-    _set(this.data, split(propPath), value);
-    return this;
-  }
-
-  /**
-   * Get value for a property path, return `defaultValue` if the property path does not exist.
-   * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
-   * @param defaultValue the value to return if the property path does not exist
-   */
-  get(propPath: string | string[], defaultValue?: any) {
-    const result = _get(this.data, split(propPath));
-    return result === undefined ? defaultValue : result;
+  get(propPath: string | string[]): Entry | undefined {
+    const k = split(propPath);
+    if (!_has(this.data, k)) {
+      return undefined;
+    }
+    return { value: _get(this.data, k), comments: _get(this.commentMap, k) };
   }
 
   /**

@@ -3,7 +3,7 @@ import { ReflectDeep } from 'reflect-deep';
 export const _isArray = Array.isArray;
 export const _keys = Object.keys;
 
-export const { get: _get, set: _set, deleteProperty: _delete } = ReflectDeep;
+export const { get: _get, set: _set, has: _has, deleteProperty: _delete } = ReflectDeep;
 
 export const _move = (obj: any, from: any[], to: any[]) => {
   const value = _get(obj, from);
