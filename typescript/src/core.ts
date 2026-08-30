@@ -1,33 +1,20 @@
 import { get as _get, set as _set } from 'reflect-deep';
-import { _isArray, _isSpace, _keys } from './common.js';
+import { _isArray, _keys } from './common.js';
 
 export const notComment = (t: string) => !t.startsWith(COMMENT_PREFIX);
 
-export function split(propPath: string | string[]): string[] {
-  if (_isArray(propPath)) {
-    if (propPath.length === 0) {
-      throw new TypeError(`Invalid propPath argument, must be a non-empty array of strings.`);
-    }
-    return propPath;
-  } else if (typeof propPath === 'string') {
-    return propPath.split('.');
+export function split(path: string | string[]): string[] {
+  if (typeof path === 'string') {
+    return path.split('.');
   }
-  throw new TypeError(`Invalid propPath argument, must be a string or an array of strings.`);
-}
-
-export function validComments(comments: any): comments is string[] {
-  return _isArray(comments) && comments.every((c) => typeof c === 'string');
+  if (_isArray(path) && path.length > 0) {
+    return path;
+  }
+  throw new TypeError(`Invalid propPath, must be string | string[].`);
 }
 
 export function stripPrefix(t: string): string {
-  return t.replace(COMMENT_PREFIX, '').trim();
-}
-
-export function trim(text: string) {
-  return text
-    .split(/(\r\n|\r|\n)/)
-    .map((t) => t.trim())
-    .filter((v) => v.length > 0);
+  return t.replace(COMMENT_PREFIX, '').trimStart();
 }
 
 /**
@@ -157,15 +144,8 @@ export function stripTrailingCommas(text: string) {
   return chars.filter((c) => c !== null).join('');
 }
 
-// TODO 可以缩短点
-export function uuidName(origin: string) {
-  return (
-    origin +
-    '_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) =>
-      (c === 'x' ? (Math.random() * 16) | 0 : (Math.random() * 4) | (0 + 8)).toString(16),
-    )
-  );
-}
+let r = () => Math.random() * 43 + 48;
+export const uuidName = (origin: string) => origin + String.fromCharCode(r(), r(), r(), r(), r(), r(), r());
 
 /**
  * Marks property with comments into a uuidName, so that

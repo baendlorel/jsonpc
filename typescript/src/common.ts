@@ -5,9 +5,9 @@ export const _keys = Object.keys;
 
 export const _noop = () => {};
 
-export function _mustArray(value: any, name: string): asserts value is any[] {
+export function _comments(value: any): asserts value is any[] {
   if (!_isArray(value)) {
-    throw new TypeError(`Invalid ${name}, must be an array of strings.`);
+    throw new TypeError(`Invalid comments, must be string[].`);
   }
 }
 

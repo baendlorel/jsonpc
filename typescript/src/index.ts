@@ -1,6 +1,5 @@
 import { get as _get, set as _set, has as _has, deleteProperty as _delete } from 'reflect-deep';
 import {
-  trim,
   notComment,
   aggregate,
   stripPrefix,
@@ -11,7 +10,7 @@ import {
   split,
   stripTrailingCommas,
 } from './core.js';
-import { _isArray, _mustArray } from './common.js';
+import { _isArray, _comments } from './common.js';
 import { arrayOpers, getArray, SupportedArrayMethods } from './array.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
@@ -30,7 +29,7 @@ export class JSONPC {
   /**
    * Map a property path to a comment string array.
    */
-  private commentMap: any;
+  private comments: any;
   private data: any;
 
   /**
@@ -39,8 +38,11 @@ export class JSONPC {
    * @param reviver A function that transforms the results. This function is called for each member of the object.
    */
   constructor(text: string, reviver?: (this: any, key: string, value: any) => any) {
-    const lines = trim(text);
-    const withoutComments = lines.filter(notComment);
+    const lines0 = text
+      .split(/(\r\n|\r|\n)/)
+      .map((t) => t.trim())
+      .filter((v) => v.length > 0);
+    const withoutComments = lines0.filter(notComment);
     const rawJson = stripTrailingCommas(withoutComments.join(''));
     try {
       this.data = reviver ? JSON.parse(rawJson, reviver) : JSON.parse(rawJson);
@@ -51,19 +53,19 @@ export class JSONPC {
     // & Now the json is some how valid.
 
     // Fill the whole file level comments
-    // TODO 没有更简单的写法了吗
-    const itop = lines.findIndex(notComment) - 1;
-    const ibottom = lines.length - lines.concat().reverse().findIndex(notComment);
-    if (ibottom <= lines.length - 1) {
-      this.bottom = lines.splice(ibottom).map(stripPrefix); //! Must be done first, or indexes will change.
+    const itop = lines0.findIndex(notComment) - 1;
+    const ibottom = lines0.findLastIndex(notComment) + 1;
+    //! Must be done first, or indexes will change.
+    if (ibottom !== -1 && ibottom <= lines0.length - 1) {
+      this.bottom = lines0.splice(ibottom).map(stripPrefix);
     }
-    if (itop >= 0) {
-      this.top = lines.splice(0, itop + 1).map(stripPrefix);
+    if (itop > 0) {
+      this.top = lines0.splice(0, itop + 1).map(stripPrefix);
     }
 
-    const named = mark(aggregate(lines));
-    this.data = JSON.parse(named.lines.join(''));
-    this.commentMap = visit(this.data, named.unames);
+    const { lines, unames } = mark(aggregate(lines0));
+    this.data = JSON.parse(lines.join(''));
+    this.comments = visit(this.data, unames);
   }
 
   get topComments(): string[] {
@@ -75,12 +77,12 @@ export class JSONPC {
   }
 
   set topComments(comments: string[]) {
-    _mustArray(comments, 'comments');
+    _comments(comments);
     this.top = [...comments];
   }
 
   set bottomComments(comments: string[]) {
-    _mustArray(comments, 'comments');
+    _comments(comments);
     this.bottom = [...comments];
   }
 
@@ -97,11 +99,11 @@ export class JSONPC {
       _set(this.data, k, entry.value);
     }
     if ('comments' in entry) {
-      _mustArray(entry.comments, 'comments');
+      _comments(entry.comments);
       if (entry.comments.length === 0) {
-        _delete(this.commentMap, k);
+        _delete(this.comments, k);
       } else {
-        _set(this.commentMap, k, entry.comments);
+        _set(this.comments, k, entry.comments);
       }
     }
     return this;
@@ -116,7 +118,7 @@ export class JSONPC {
     if (!_has(this.data, k)) {
       return undefined;
     }
-    return { value: _get(this.data, k), comments: _get(this.commentMap, k) };
+    return { value: _get(this.data, k), comments: _get(this.comments, k) };
   }
 
   /**
@@ -132,7 +134,7 @@ export class JSONPC {
     args: Parameters<Array<any>[Fn]>,
   ): this {
     const { k, arr } = getArray(propPath, this.data);
-    arrayOpers[method](arr, args as any, this.commentMap, k);
+    arrayOpers[method](arr, args as any, this.comments, k);
     return this;
   }
 
@@ -149,7 +151,7 @@ export class JSONPC {
     space?: number,
   ): string {
     const top = this.top.map((v) => `${COMMENT_PREFIX} ${v}`);
-    const lines = serialize(this.commentMap, this.data, space ?? 2, replacer ?? null);
+    const lines = serialize(this.comments, this.data, space ?? 2, replacer ?? null);
     const bottom = this.bottom.map((v) => `${COMMENT_PREFIX} ${v}`);
 
     return top.concat(lines, bottom).join('\n');
@@ -182,12 +184,12 @@ export class JSONPC {
   destroy() {
     this.top.length = 0;
     this.bottom.length = 0;
-    this.commentMap.clear();
+    this.comments.clear();
 
     this.top = null as any;
     this.bottom = null as any;
     this.data = null as any;
-    this.commentMap = null as any;
+    this.comments = null as any;
   }
 }
 
