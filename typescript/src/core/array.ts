@@ -1,7 +1,5 @@
-import { quickSort } from '../../deprecated/array-sort.js';
 import { get as _get, deleteProperty as _delete } from 'reflect-deep';
-import { _isArray, _move, _exchange } from './common.js';
-import { split } from './initializers.js';
+import { _isArray, _move, _exchange, _split } from './common.js';
 
 export type ArrayMethods = {
   [K in keyof Array<any>]: Array<any>[K] extends Function ? K : never;
@@ -14,7 +12,7 @@ type Operations = {
 export type SupportedArrayMethods = 'push' | 'pop' | 'shift' | 'unshift' | 'splice' | 'reverse';
 
 export const getArray = (propPath: string | string[], data: any) => {
-  const k = split(propPath);
+  const k = _split(propPath);
   const arr = _get(data, k);
   if (!_isArray(arr)) {
     throw new TypeError(`The property path "${propPath}" is not an array.`);
@@ -22,7 +20,7 @@ export const getArray = (propPath: string | string[], data: any) => {
   return { k, arr };
 };
 
-export const push: Operations['push'] = (arr, args) => arr.push.apply(arr, args);
+export const push: Operations['push'] = (arr, args) => arr.push(...args);
 
 export const pop: Operations['pop'] = (arr, _args, commentsMap, path) => (
   _delete(commentsMap, [...path, arr.length - 1]),

@@ -5,12 +5,6 @@ export const _keys = Object.keys;
 
 export const _noop = () => {};
 
-export function _comments(value: any): asserts value is any[] {
-  if (!_isArray(value)) {
-    throw new TypeError(`Invalid comments, must be string[].`);
-  }
-}
-
 export const _notComment = (t: string) => !t.startsWith(COMMENT_PREFIX);
 
 export const _move = (obj: any, from: any[], to: any[]) => {
@@ -24,3 +18,15 @@ export const _exchange = (obj: any, path1: any[], path2: any[]) => {
   _set(obj, path1, value2);
   _set(obj, path2, value1);
 };
+
+export const _split = (path: string | string[]): string[] => {
+  if (typeof path === 'string') {
+    return path.split('.');
+  }
+  if (_isArray(path) && path.length > 0) {
+    return path;
+  }
+  throw new TypeError(`Invalid propPath, must be string | string[].`);
+};
+
+export const _stripPrefix = (t: string) => t.replace(COMMENT_PREFIX, '').trimStart();

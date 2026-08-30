@@ -1,18 +1,6 @@
 import { get as _get, set as _set } from 'reflect-deep';
-import { _isArray, _keys, _notComment } from './common.js';
+import { _isArray, _keys, _notComment, _stripPrefix } from './common.js';
 import { interpretName } from '../walkers/interpret-name.js';
-
-export const split = (path: string | string[]): string[] => {
-  if (typeof path === 'string') {
-    return path.split('.');
-  }
-  if (_isArray(path) && path.length > 0) {
-    return path;
-  }
-  throw new TypeError(`Invalid propPath, must be string | string[].`);
-};
-
-export const stripPrefix = (t: string) => t.replace(COMMENT_PREFIX, '').trimStart();
 
 /**
  * Multiple comment lines will be collapsed into a string array.
@@ -29,7 +17,7 @@ export function aggregate(lines: string[]): Array<string | string[]> {
       if (array.length === 0) {
         modified.push(array);
       }
-      array.push(stripPrefix(lines[i]));
+      array.push(_stripPrefix(lines[i]));
     }
   }
 
@@ -37,15 +25,15 @@ export function aggregate(lines: string[]): Array<string | string[]> {
 }
 
 const r = () => Math.random() * 43 + 48;
-export const uuidName = (origin: string) => origin + String.fromCharCode(r(), r(), r(), r(), r(), r(), r());
+export const uniqueName = (origin: string) => origin + String.fromCharCode(r(), r(), r(), r(), r(), r(), r());
 
 /**
- * Marks property with comments into a uuidName, so that
+ * Marks property with comments into a uniqueName, so that
  * we can associate the right property with right comments.
  * @param aggregated muiltiple comments are collapsed into `string[]`.
  */
 export function mark(aggregated: Array<string | string[]>) {
-  // Maps uuid name to the original name
+  // Maps unique name to the original name
   const unames = new Map<string, string>();
   const lines = aggregated.map((v, i) => {
     if (typeof v === 'string') {
@@ -54,9 +42,9 @@ export function mark(aggregated: Array<string | string[]>) {
     }
 
     const origin = interpretName(aggregated[i + 1] as string);
-    const uname = uuidName(origin);
+    const uname = uniqueName(origin);
     // ! At this point, we don't know the full property path of
-    // ! this comment yet, so we use uuid names to mark them
+    // ! this comment yet, so we use unique names to mark them
     unames.set(uname, origin);
     return `"${uname}":${JSON.stringify(v)},`;
   });
@@ -69,9 +57,9 @@ export function mark(aggregated: Array<string | string[]>) {
  * @param o the parsed object
  * @param unames uname -> original name map
  * @param path property name path
- * @param commentMap returned map
+ * @param comments returned map
  */
-export function visit(o: any, unames: Map<string, string>, path: string[] = [], commentMap: any = {}) {
+export function visit(o: any, unames: Map<string, string>, path: string[] = [], comments: any = {}) {
   for (const k in o) {
     const origin = unames.get(k);
     const v = o[k];
@@ -81,24 +69,24 @@ export function visit(o: any, unames: Map<string, string>, path: string[] = [], 
       // Store the comments outside the object.
       delete o[k];
       const nextPath = path.concat(origin);
-      _set(commentMap, nextPath, v);
+      _set(comments, nextPath, v);
       if (typeof v === 'object') {
-        visit(v, unames, nextPath, commentMap);
+        visit(v, unames, nextPath, comments);
       }
     } else if (_isArray(v)) {
       const arr: any[] = [];
       const nextPath = path.concat(k);
-      _set(commentMap, nextPath, arr);
+      _set(comments, nextPath, arr);
       for (let i = 0; i < v.length; i++) {
-        visit(v[i], unames, nextPath.concat(String(i)), commentMap);
+        visit(v[i], unames, nextPath.concat(String(i)), comments);
       }
     } else if (typeof v === 'object') {
-      visit(v, unames, path.concat(k), commentMap);
+      visit(v, unames, path.concat(k), comments);
     } else {
       // primitives, do nothing
     }
   }
-  return commentMap;
+  return comments;
 }
 
 /**

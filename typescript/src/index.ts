@@ -1,6 +1,6 @@
-import { get as _get, set as _set, has as _has, deleteProperty as _delete } from 'reflect-deep';
-import { aggregate, stripPrefix, mark, visit, serialize, split } from './core/initializers.js';
-import { _isArray, _comments, _notComment } from './core/common.js';
+import { get as _get, set as _set, has as _has, deleteProperty as _delete, reach as _reach } from 'reflect-deep';
+import { aggregate, mark, visit, serialize } from './core/initializers.js';
+import { _isArray, _notComment, _split, _stripPrefix } from './core/common.js';
 import { arrayOpers, getArray, SupportedArrayMethods } from './core/array.js';
 import { stripTrailingCommas } from './walkers/trailing-comma.js';
 
@@ -14,8 +14,8 @@ interface Entry {
 }
 
 export class JSONPC {
-  private top: string[] = [];
-  private bottom: string[] = [];
+  private _top: string[] = [];
+  private _bottom: string[] = [];
 
   /**
    * Map a property path to a comment string array.
@@ -48,10 +48,10 @@ export class JSONPC {
     const end = lines0.findLastIndex(_notComment);
     //! Must be done first, or indexes will change.
     if (end !== -1 && end < lines0.length - 1) {
-      this.bottom = lines0.splice(end + 1).map(stripPrefix);
+      this._bottom = lines0.splice(end + 1).map(_stripPrefix);
     }
     if (start > 0) {
-      this.top = lines0.splice(0, start).map(stripPrefix);
+      this._top = lines0.splice(0, start).map(_stripPrefix);
     }
 
     const { lines, unames } = mark(aggregate(lines0));
@@ -59,22 +59,20 @@ export class JSONPC {
     this.comments = visit(this.data, unames);
   }
 
-  get topComments(): string[] {
-    return this.top;
+  get top(): string[] {
+    return this._top;
   }
 
-  get bottomComments(): string[] {
-    return this.bottom;
+  get bottom(): string[] {
+    return this._bottom;
   }
 
-  set topComments(comments: string[]) {
-    _comments(comments);
-    this.top = [...comments];
+  set top(comments: string[]) {
+    this._top = [...comments];
   }
 
-  set bottomComments(comments: string[]) {
-    _comments(comments);
-    this.bottom = [...comments];
+  set bottom(comments: string[]) {
+    this._bottom = [...comments];
   }
 
   /**
@@ -85,16 +83,20 @@ export class JSONPC {
    *
    */
   set(propPath: string | string[], entry: Partial<Entry>): this {
-    const k = split(propPath);
+    const k = _split(propPath);
     if ('value' in entry) {
       _set(this.data, k, entry.value);
     }
-    if ('comments' in entry) {
-      _comments(entry.comments);
-      if (entry.comments.length === 0) {
+
+    const comments = entry.comments;
+    if (comments) {
+      if (!_isArray(comments)) {
+        throw new TypeError(`Invalid comments, must be string[].`);
+      }
+      if (comments.length === 0) {
         _delete(this.comments, k);
       } else {
-        _set(this.comments, k, entry.comments);
+        _set(this.comments, k, comments);
       }
     }
     return this;
@@ -105,11 +107,9 @@ export class JSONPC {
    * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
    */
   get(propPath: string | string[]): Entry | undefined {
-    const k = split(propPath);
-    if (!_has(this.data, k)) {
-      return undefined;
-    }
-    return { value: _get(this.data, k), comments: _get(this.comments, k) };
+    const k = _split(propPath);
+    const rr = _reach(this.data, k);
+    return rr.reached ? { value: rr.value, comments: _get(this.comments, k) } : undefined;
   }
 
   /**
@@ -141,9 +141,9 @@ export class JSONPC {
     replacer?: ((this: any, key: string, value: any) => any) | (number | string)[] | null,
     space?: number,
   ): string {
-    const top = this.top.map((v) => `${COMMENT_PREFIX} ${v}`);
+    const top = this._top.map((v) => `${COMMENT_PREFIX} ${v}`);
     const lines = serialize(this.comments, this.data, space ?? 2, replacer ?? null);
-    const bottom = this.bottom.map((v) => `${COMMENT_PREFIX} ${v}`);
+    const bottom = this._bottom.map((v) => `${COMMENT_PREFIX} ${v}`);
 
     return top.concat(lines, bottom).join('\n');
   }
@@ -173,12 +173,12 @@ export class JSONPC {
    * Release the references, clear internal containers.
    */
   destroy() {
-    this.top.length = 0;
-    this.bottom.length = 0;
+    this._top.length = 0;
+    this._bottom.length = 0;
     this.comments.clear();
 
-    this.top = null as any;
-    this.bottom = null as any;
+    this._top = null as any;
+    this._bottom = null as any;
     this.data = null as any;
     this.comments = null as any;
   }
