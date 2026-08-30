@@ -46,11 +46,11 @@ const stripTrailingCommasWalker = new Walker('', {
  * 3. Comments satisfies the rules of JSONPC.
  */
 export function stripTrailingCommas(text: string) {
-  const chars: (string | null)[] = text.split('');
-
-  let state: WalkState = WalkState.Idle;
+  chars = [];
+  state = WalkState.Idle;
+  lastCommaIndex = -1;
 
   stripTrailingCommasWalker.reset({ text }).run();
-
-  return chars.filter((c) => c !== null).join('');
+  const result = chars.filter((c) => c !== null).join('');
+  return result;
 }

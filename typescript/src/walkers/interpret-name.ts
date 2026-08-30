@@ -39,18 +39,15 @@ export function interpretName(line: string) {
   if (line[0] !== '"') {
     throw new Error(`Comments are only allowed directly above property names`);
   }
-
-  interpretNameWalker.reset({ text: line, start: 1, inString: true }).run();
-
-  if (state !== WalkState.Found) {
-    throw new Error(`Cannot find ending quote: ${line}`);
-  }
-
-  const result = chars.join('');
-
   // Reset for next use
   chars = [];
   state = WalkState.Idle;
 
-  return result;
+  interpretNameWalker.reset({ text: line, start: 1, inString: true }).run();
+
+  if ((state as WalkState) !== WalkState.Found) {
+    throw new Error(`Cannot find ending quote: ${line}`);
+  }
+
+  return chars.join('');
 }
