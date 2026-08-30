@@ -1,4 +1,4 @@
-import { ReflectDeep } from 'reflect-deep';
+import { has as _has, get as _get, set as _set, deleteProperty as _delete } from 'reflect-deep';
 
 export const _isArray = Array.isArray;
 export const _keys = Object.keys;
@@ -8,8 +8,6 @@ export function _mustArray(value: any, name: string): asserts value is any[] {
     throw new TypeError(`Invalid ${name}, must be an array of strings.`);
   }
 }
-
-export const { get: _get, set: _set, has: _has, deleteProperty: _delete } = ReflectDeep;
 
 export const _move = (obj: any, from: any[], to: any[]) => {
   const value = _get(obj, from);

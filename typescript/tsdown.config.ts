@@ -10,10 +10,10 @@ export default defineConfig({
   format: ['esm', 'cjs'],
   dts: true,
   clean: true,
-  sourcemap: true,
-  minify: !isDev,
+  sourcemap: false, // 关闭sourcemap减少体积
+  minify: true, // 始终minify
   target: 'node16',
-  treeshake: !isDev,
+  treeshake: true, // 始终启用tree-shaking
   plugins: [
     (replace as unknown as typeof replace.default)({
       preventAssignment: true,
@@ -26,6 +26,6 @@ export default defineConfig({
     }),
   ],
   deps: {
-    onlyBundle: ['type-narrow'],
+    onlyBundle: ['reflect-deep'],
   },
 });

@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       reflect-deep:
-        specifier: ^2.0.1
-        version: 2.0.1
+        specifier: ^2.1.0
+        version: 2.1.0
     devDependencies:
       '@rollup/plugin-replace':
         specifier: ^6.0.3
@@ -799,8 +799,8 @@ packages:
   quansync@1.0.0:
     resolution: {integrity: sha512-5xZacEEufv3HSTPQuchrvV6soaiACMFnq1H8wkVioctoH3TRha9Sz66lOxRwPK/qZj7HPiSveih9yAyh98gvqA==}
 
-  reflect-deep@2.0.1:
-    resolution: {integrity: sha512-FUQYBAoLEnXX7JuoaUr6Mn+Jd0ijY8zjFVkohWltvK7JO8pFw3MQjtoQfpNDw5V+svjx5mdNyDNIfWqtBrGaOA==}
+  reflect-deep@2.1.0:
+    resolution: {integrity: sha512-INK/aySQPERJD2IeA8NLYw48Volu99bXGVsFy2WB690NNDA0IOIozdMmRHymDkPEZmr8i9DIVZsOLZZiTeGdjw==}
 
   resolve-pkg-maps@1.0.0:
     resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
@@ -1492,7 +1492,7 @@ snapshots:
 
   quansync@1.0.0: {}
 
-  reflect-deep@2.0.1: {}
+  reflect-deep@2.1.0: {}
 
   resolve-pkg-maps@1.0.0: {}
 

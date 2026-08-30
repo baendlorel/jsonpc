@@ -1,3 +1,4 @@
+import { get as _get, set as _set, has as _has, deleteProperty as _delete } from 'reflect-deep';
 import {
   isComment,
   trim,
@@ -10,7 +11,7 @@ import {
   serialize,
   split,
 } from './core.js';
-import { _isArray, _get, _set, _has, _mustArray, _delete } from './common.js';
+import { _isArray, _mustArray } from './common.js';
 import { arrayOpers, getArray, SupportedArrayMethods } from './array.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {

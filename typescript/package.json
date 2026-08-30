@@ -42,9 +42,6 @@
     "url": "https://github.com/baendlorel/jsonpc/issues"
   },
   "homepage": "https://github.com/baendlorel/jsonpc/tree/main/#readme",
-  "dependencies": {
-    "reflect-deep": "^2.0.1"
-  },
   "devDependencies": {
     "@rollup/plugin-replace": "^6.0.3",
     "@types/node": "^26.4.0",
@@ -52,5 +49,8 @@
     "tsx": "^4.23.12",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "reflect-deep": "^2.1.0"
   }
 }

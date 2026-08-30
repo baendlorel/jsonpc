@@ -1,4 +1,5 @@
-import { _get, _isArray, _keys, _set } from './common.js';
+import { get as _get, set as _set } from 'reflect-deep';
+import { _isArray, _keys } from './common.js';
 
 export function isComment(t: string) {
   return t.startsWith(COMMENT_PREFIX);
