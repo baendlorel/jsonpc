@@ -1,8 +1,10 @@
-import { aggregate, mark, visit, serialize } from './core/initializers.js';
+import { aggregate, mark, visit } from './core/initializers.js';
 import { _isArray, _notComment, _split, _stripPrefix } from './core/common.js';
+import { _set, _delete, _get } from './core/path-map.js';
+
 import { arrayOpers, SupportedArrayMethods } from './core/array.js';
 import { stripTrailingCommas } from './walkers/trailing-comma.js';
-import { _set, _delete, _get } from './core/path-map.js';
+import { serialize } from './core/serializer.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
   (globalThis as any).COMMENT_PREFIX = '//';

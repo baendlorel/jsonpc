@@ -1,6 +1,7 @@
 export const _isArray = Array.isArray;
 export const _keys = Object.keys;
 export const _ascii = String.fromCharCode;
+export const _stringify = JSON.stringify;
 
 export const _noop = () => {};
 

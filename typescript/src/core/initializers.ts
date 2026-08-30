@@ -1,4 +1,4 @@
-import { _ascii, _isArray, _keys, _notComment, _stripPrefix } from './common.js';
+import { _ascii, _isArray, _keys, _notComment, _stringify, _stripPrefix } from './common.js';
 import { interpretName } from '../walkers/interpret-name.js';
 import { _set, _get } from './path-map.js';
 
@@ -43,7 +43,7 @@ export function mark(aggregated: Array<string | string[]>) {
     const origin = interpretName(aggregated[i + 1] as string);
     const uname = _ascii(r(), r(), r(), r(), r(), r(), r());
     unames.set(uname, origin);
-    return `"${uname}":${JSON.stringify(v)},`;
+    return `"${uname}":${_stringify(v)},`;
   });
 
   return { lines, unames };
@@ -84,129 +84,4 @@ export function visit(o: any, unames: Map<string, string>, path: string[] = [], 
     }
   }
   return comments;
-}
-
-/**
- * Serialize a value, appending lines to `lines`.
- * @param path current property path (string[]) for comment lookup
- */
-export function serialize(
-  comments: any,
-  obj: any,
-  pad: number,
-  replacer: ((this: any, key: string, value: any) => any) | (number | string)[] | null,
-  depth: number = 0,
-  path: string[] = [],
-  lines: string[] = [],
-): string[] {
-  const prefix = ' '.repeat(depth * pad);
-
-  if (obj === null || typeof obj !== 'object') {
-    lines.push(`${prefix}${JSON.stringify(obj, null, pad)}`);
-    return lines;
-  }
-
-  if (_isArray(obj)) {
-    if (obj.length === 0) {
-      lines[lines.length - 1] += `[]`;
-      return lines;
-    }
-
-    /**
-     * @see same logic about '{' below.
-     */
-    if (lines.length === 0 || lines[lines.length - 1].endsWith('[')) {
-      lines.push(`${prefix}[`);
-    } else {
-      lines[lines.length - 1] += `[`;
-    }
-
-    for (let i = 0; i < obj.length; i++) {
-      const val = typeof replacer === 'function' ? replacer.call(obj, String(i), obj[i]) : obj[i];
-      serialize(comments, val, pad, replacer, depth + 1, path.concat(String(i)), lines);
-
-      // * trailing comma for array elements
-      lines[lines.length - 1] += ',';
-    }
-    lines.push(`${prefix}]`);
-    return lines;
-  }
-
-  // Plain object
-  const keys = _keys(obj);
-  if (keys.length === 0) {
-    lines.push(`${prefix}{}`);
-    return lines;
-  }
-
-  // Collect entries with their values resolved through replacer
-  interface Entry {
-    key: string;
-    val: any;
-    skipped: boolean;
-    propPath: string[];
-  }
-  const entries: Entry[] = keys.map((key) => {
-    const val = typeof replacer === 'function' ? replacer.call(obj, key, obj[key]) : obj[key];
-    return {
-      key,
-      val,
-      skipped: val === undefined,
-      propPath: path.concat(key),
-    };
-  });
-
-  const active = entries.filter((e) => !e.skipped);
-
-  if (active.length === 0) {
-    lines[lines.length - 1] += `{}`;
-    return lines;
-  }
-
-  /**
-   * This makes:
-   * ```js
-   * {
-   *  "ddd": {
-   *  }
-   * }
-   * ```
-   * instead of:
-   * ```js
-   * {
-   *   "ddd":
-   *   {
-   *   }
-   * }
-   */
-  if (lines.length === 0 || lines[lines.length - 1].endsWith('[')) {
-    lines.push(`${prefix}{`);
-  } else {
-    lines[lines.length - 1] += `{`;
-  }
-
-  const indent = ' '.repeat((depth + 1) * pad);
-  for (let i = 0; i < active.length; i++) {
-    const { key, val, propPath } = active[i];
-
-    // Emit comments before this property
-    _get(comments, propPath)?.forEach((c: string) => lines.push(`${indent}${COMMENT_PREFIX} ${c}`));
-
-    // Emit the property key
-    const keyLine = `${indent}"${key}": `;
-    lines.push(keyLine);
-
-    // Serialize the value — for primitives, inline on the same line
-    const isObj = val !== null && typeof val === 'object';
-    if (!isObj) {
-      lines[lines.length - 1] += JSON.stringify(val, replacer as any, pad);
-    } else {
-      serialize(comments, val, pad, replacer, depth + 1, propPath, lines);
-    }
-
-    // * trailing comma for array elements
-    lines[lines.length - 1] += ',';
-  }
-  lines.push(`${prefix}}`);
-  return lines;
 }
