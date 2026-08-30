@@ -1,4 +1,4 @@
-import { WalkState, Walker, Side } from '../core/walker.class.js';
+import { WalkState, Walker, Side } from './walker.class.js';
 
 let chars: string[] = [];
 let state: WalkState = WalkState.Idle;

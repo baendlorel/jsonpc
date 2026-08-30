@@ -1,4 +1,4 @@
-import { WalkState, WalkerHandlerArgsWithSides, Side, Walker } from '../core/walker.class.js';
+import { WalkState, WalkerHandlerArgsWithSides, Side, Walker } from './walker.class.js';
 
 let lastCommaIndex = -1;
 let chars: (string | null)[] = [];

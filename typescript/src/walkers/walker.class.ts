@@ -1,4 +1,4 @@
-import { _noop } from './common.js';
+import { _noop } from '../core/common.js';
 
 /**
  * This state is not needed by `Walker` class, but is used by some walkers that are built on top of it.
