@@ -10,7 +10,7 @@ import {
   serialize,
   split,
 } from './core.js';
-import { _isArray, _get, _set, _has } from './common.js';
+import { _isArray, _get, _set, _has, _mustArray } from './common.js';
 import { arrayOpers, getArray, SupportedArrayMethods } from './array.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
@@ -74,16 +74,12 @@ export class JSONPC {
   }
 
   set topComments(comments: string[]) {
-    if (!_isArray(comments)) {
-      throw new TypeError(`Invalid comments argument, must be an array of strings.`);
-    }
+    _mustArray(comments, 'comments');
     this.top = comments;
   }
 
   set bottomComments(comments: string[]) {
-    if (!_isArray(comments)) {
-      throw new TypeError(`Invalid comments argument, must be an array of strings.`);
-    }
+    _mustArray(comments, 'comments');
     this.bottom = comments;
   }
 
@@ -98,9 +94,7 @@ export class JSONPC {
       _set(this.data, k, entry.value);
     }
     if ('comments' in entry) {
-      if (!_isArray(entry.comments)) {
-        throw new TypeError(`Invalid comments argument, must be an array of strings or a function.`);
-      }
+      _mustArray(entry.comments, 'comments');
       _set(this.commentMap, k, entry.comments);
     }
     return this;

@@ -49,29 +49,37 @@ _Other positions and block comments are not allowed._
 // ✅ Valid: Bottom-level file comment
 ```
 
-### Read and set comments
+### Read and set values and comments
 
 ```ts
-// Get comments for a property path
-const comments = jsonpc.getComments('profile');
-// → ['// Nested object comment']
+// Get both value and comments for a property path
+const entry = jsonpc.get('profile');
+// → { value: { age: 25 }, comments: ['// Nested object comment'] }
 
-// Set comments for a property
-jsonpc.setComments('name', ['// This is a new comment']);
-```
+// Get value only
+const name = jsonpc.get('name')?.value;    // → "Alice"
+const age = jsonpc.get('profile.age')?.value; // → 25
+const age = jsonpc.get(['profile','age'])?.value; // → 25
 
-### Read and set values
+// Get comments only
+const comments = jsonpc.get('name')?.comments;
+// → ['This is a name comment']
 
-```ts
-// Get values
-const name = jsonpc.get('name');           // → "Alice"
-const age = jsonpc.get('profile.age');     // → 25
+// Set value only
+jsonpc.set('profile.age', { value: 26 });
 
-// Set values
-jsonpc.set('profile.age', 26);
+// Set comments only
+jsonpc.set('name', { comments: ['Updated name comment'] });
 
-// Get with default value if path doesn't exist
-const email = jsonpc.get('email', 'N/A');  // → "N/A"
+// Set both value and comments
+jsonpc.set('profile', {
+  value: { age: 26 },
+  comments: ['Updated profile comment']
+});
+
+// Handle non-existent paths
+const entry = jsonpc.get('nonexistent');
+// → undefined
 ```
 
 ### Array operations
@@ -85,6 +93,24 @@ jsonpc.updateArray('items', 'unshift', [0]);        // Add to beginning
 jsonpc.updateArray('items', 'splice', [1, 2, 5, 6]); // Replace elements
 jsonpc.updateArray('items', 'sort', [(a, b) => a - b]); // Sort
 jsonpc.updateArray('items', 'reverse', []);         // Reverse
+```
+
+### Top and Bottom Comments
+
+```ts
+// Get top-level file comments
+const topComments = jsonpc.topComments;
+// → ['// Top comment 1', '// Top comment 2']
+
+// Get bottom-level file comments  
+const bottomComments = jsonpc.bottomComments;
+// → ['// Bottom comment']
+
+// Set top-level comments
+jsonpc.topComments = ['// New top comment'];
+
+// Set bottom-level comments
+jsonpc.bottomComments = ['// New bottom comment'];
 ```
 
 ### Serialization
@@ -118,19 +144,33 @@ const jsonpc = parse(text, (key, value) => {
 
 ### `class JSONPC`
 
+#### Properties
+
+| Property         | Type       | Description                        |
+| ---------------- | ---------- | ---------------------------------- |
+| `topComments`    | `string[]` | Get/set top-level file comments    |
+| `bottomComments` | `string[]` | Get/set bottom-level file comments |
+
 #### Methods
 
-| Method                                                | Description                                   |
-| ----------------------------------------------------- | --------------------------------------------- |
-| `getComments(path: string): string[] \| undefined`    | Get comments for a property path              |
-| `setComments(path: string, comments: string[]): this` | Set comments for a property path              |
-| `get(path: string, defaultValue?: any): any`          | Get a value by property path                  |
-| `set(path: string, value: any): this`                 | Set a value by property path                  |
-| `updateArray(path, method, args): this`               | Execute array operations                      |
-| `stringify(replacer?, space?): string`                | Serialize to JSON text with comments          |
-| `toObject<T>(): T`                                    | Return a pure JavaScript object (no comments) |
-| `stringifyWithoutComment(...args): string`            | Return standard JSON string (no comments)     |
-| `destroy(): void`                                     | Clean up internal references                  |
+| Method                                           | Description                                   |
+| ------------------------------------------------ | --------------------------------------------- |
+| `get(path: string): Entry \| undefined`          | Get entry with value and comments             |
+| `set(path: string, entry: Partial<Entry>): this` | Set value and/or comments                     |
+| `updateArray(path, method, args): this`          | Execute array operations                      |
+| `stringify(replacer?, space?): string`           | Serialize to JSON text with comments          |
+| `toObject<T>(): T`                               | Return a pure JavaScript object (no comments) |
+| `stringifyWithoutComment(...args): string`       | Return standard JSON string (no comments)     |
+| `destroy(): void`                                | Clean up internal references                  |
+
+#### Type Definitions
+
+```typescript
+interface Entry {
+  value: any;
+  comments?: string[];
+}
+```
 
 #### Property Path Format
 
@@ -159,9 +199,9 @@ The `updateArray` method supports these array operations:
 
 | Solution   | Custom Parser | Arbitrary Position Comments | Trailing Commas | Size   |
 | ---------- | ------------- | --------------------------- | --------------- | ------ |
-| **jsonpc** | ❌             | ❌                           | ✅               | Small  |
-| json5      | ✅             | ✅                           | ✅               | Large  |
-| JSONC      | ✅             | ✅                           | ❌               | Medium |
+| **jsonpc** | ❌            | ❌                          | ✅              | Small  |
+| json5      | ✅            | ✅                          | ✅              | Large  |
+| JSONC      | ✅            | ✅                          | ❌              | Medium |
 
 jsonpc trades some flexibility for simplicity and performance.
 

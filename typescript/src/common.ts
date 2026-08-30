@@ -3,6 +3,12 @@ import { ReflectDeep } from 'reflect-deep';
 export const _isArray = Array.isArray;
 export const _keys = Object.keys;
 
+export function _mustArray(value: any, name: string): asserts value is any[] {
+  if (!_isArray(value)) {
+    throw new TypeError(`Invalid ${name}, must be an array of strings.`);
+  }
+}
+
 export const { get: _get, set: _set, has: _has, deleteProperty: _delete } = ReflectDeep;
 
 export const _move = (obj: any, from: any[], to: any[]) => {
