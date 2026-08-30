@@ -1,4 +1,4 @@
-import { _exchange } from '../src/common.js';
+import { _exchange } from '../src/core/common.js';
 
 const defaultCompare = function (a: any, b: any) {
   a = String(a);

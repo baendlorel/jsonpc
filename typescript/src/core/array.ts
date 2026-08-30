@@ -1,7 +1,7 @@
-import { quickSort } from '../deprecated/array-sort.js';
+import { quickSort } from '../../deprecated/array-sort.js';
 import { get as _get, deleteProperty as _delete } from 'reflect-deep';
 import { _isArray, _move, _exchange } from './common.js';
-import { split } from './core.js';
+import { split } from './initializers.js';
 
 export type ArrayMethods = {
   [K in keyof Array<any>]: Array<any>[K] extends Function ? K : never;

@@ -11,6 +11,8 @@ export function _comments(value: any): asserts value is any[] {
   }
 }
 
+export const _notComment = (t: string) => !t.startsWith(COMMENT_PREFIX);
+
 export const _move = (obj: any, from: any[], to: any[]) => {
   _set(obj, to, _get(obj, from));
   _delete(obj, from);

@@ -1,7 +1,8 @@
 import { get as _get, set as _set, has as _has, deleteProperty as _delete } from 'reflect-deep';
-import { notComment, aggregate, stripPrefix, mark, visit, serialize, split, stripTrailingCommas } from './core.js';
-import { _isArray, _comments } from './common.js';
-import { arrayOpers, getArray, SupportedArrayMethods } from './array.js';
+import { aggregate, stripPrefix, mark, visit, serialize, split } from './core/initializers.js';
+import { _isArray, _comments, _notComment } from './core/common.js';
+import { arrayOpers, getArray, SupportedArrayMethods } from './core/array.js';
+import { stripTrailingCommas } from './core/walkers.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
   (globalThis as any).COMMENT_PREFIX = '//';
@@ -32,7 +33,7 @@ export class JSONPC {
       .split(/(\r\n|\r|\n)/)
       .map((t) => t.trim())
       .filter((v) => v.length > 0);
-    const withoutComments = lines0.filter(notComment);
+    const withoutComments = lines0.filter(_notComment);
     const rawJson = stripTrailingCommas(withoutComments.join(''));
     try {
       this.data = reviver ? JSON.parse(rawJson, reviver) : JSON.parse(rawJson);
@@ -43,8 +44,8 @@ export class JSONPC {
     // & Now the json is some how valid.
 
     // Fill the whole file level comments
-    const itop = lines0.findIndex(notComment) - 1;
-    const ibottom = lines0.findLastIndex(notComment) + 1;
+    const itop = lines0.findIndex(_notComment) - 1;
+    const ibottom = lines0.findLastIndex(_notComment) + 1;
     //! Must be done first, or indexes will change.
     if (ibottom !== -1 && ibottom <= lines0.length - 1) {
       this.bottom = lines0.splice(ibottom).map(stripPrefix);
