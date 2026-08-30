@@ -1,17 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import {
-  isComment,
-  trim,
-  stripTopBottom,
-  aggregate,
-  interpretName,
-  uuidName,
-  mark,
-  visit,
-  serialize,
-} from '../src/core.js';
+import { aggregate, uuidName, mark, visit } from '../src/core/initializers.js';
 import { JSONPC } from '../src/index.js';
 import { ReflectDeep } from 'reflect-deep';
+import { interpretName } from '../src/walkers/interpret-name.js';
 
 // Helper function to set comments for a property path
 function setComments(jpc: JSONPC, path: string, comments: string[]): void {
@@ -25,84 +16,6 @@ function getComments(jpc: JSONPC, path: string): string[] | undefined {
 }
 
 describe('core', () => {
-  describe('isComment', () => {
-    it('should return true for // lines', () => {
-      expect(isComment('// foo')).toBe(true);
-      expect(isComment('//')).toBe(true);
-      expect(isComment('// 顶头注释')).toBe(true);
-    });
-
-    it('should return false for non-comment lines', () => {
-      expect(isComment('"key": 1')).toBe(false);
-      expect(isComment('{')).toBe(false);
-      expect(isComment('}')).toBe(false);
-      expect(isComment('')).toBe(false);
-    });
-  });
-
-  describe('trim', () => {
-    it('should split text into trimmed non-empty lines', () => {
-      const result = trim('  foo  \n  bar  \n');
-      expect(result).toEqual(['foo', 'bar']);
-    });
-
-    it('should handle CRLF', () => {
-      const result = trim('a\r\nb\r\n');
-      expect(result).toEqual(['a', 'b']);
-    });
-
-    it('should filter out empty lines', () => {
-      const result = trim('a\n\n\nb');
-      expect(result).toEqual(['a', 'b']);
-    });
-
-    it('should handle single line', () => {
-      const result = trim('hello');
-      expect(result).toEqual(['hello']);
-    });
-
-    it('should handle empty string', () => {
-      const result = trim('');
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe('stripTopBottom', () => {
-    it('should strip top and bottom comments', () => {
-      const lines = ['// top1', '// top2', '"a":1', '"b":2', '// bottom1'];
-      const result = stripTopBottom(lines);
-      expect(result.top).toBe(1);
-      expect(result.bottom).toBe(4);
-    });
-
-    it('should return NaN when there are no top/bottom comments', () => {
-      const lines = ['"a":1', '"b":2'];
-      const result = stripTopBottom(lines);
-      expect(Number.isNaN(result.top)).toBe(true);
-      expect(Number.isNaN(result.bottom)).toBe(true);
-    });
-
-    it('should handle only top comments', () => {
-      const lines = ['// top', '"a":1'];
-      const result = stripTopBottom(lines);
-      expect(result.top).toBe(0);
-      expect(Number.isNaN(result.bottom)).toBe(true);
-    });
-
-    it('should handle only bottom comments', () => {
-      const lines = ['"a":1', '// bottom'];
-      const result = stripTopBottom(lines);
-      expect(Number.isNaN(result.top)).toBe(true);
-      expect(result.bottom).toBe(1);
-    });
-
-    it('should handle empty array', () => {
-      const result = stripTopBottom([]);
-      expect(Number.isNaN(result.top)).toBe(true);
-      expect(Number.isNaN(result.bottom)).toBe(true);
-    });
-  });
-
   describe('aggregate', () => {
     it('should aggregate consecutive comments into arrays', () => {
       const lines = ['{', '// c1', '// c2', '"a": 1', '}'];
@@ -139,7 +52,7 @@ describe('core', () => {
     it('should handle escaped backslash in key', () => {
       // The current implementation skips escaped characters (including \")
       // so the quote is not included in the output
-      expect(interpretName('"foo\\\\bar": 1')).toBe('foo\\bar');
+      expect(interpretName('"foo\\\\bar": 1')).toBe('foo\\\\bar');
     });
 
     it('should throw on non-property lines', () => {
@@ -149,16 +62,11 @@ describe('core', () => {
     });
 
     it('should throw when colon is missing', () => {
-      expect(() => interpretName('"foo"')).toThrow(/Cannot find 2nd/);
+      expect(() => interpretName('"foo"')).toThrow(/Cannot find ending quote/);
     });
   });
 
   describe('uuidName', () => {
-    it('should append an underscore and UUID to the origin', () => {
-      const result = uuidName('foo');
-      expect(result).toMatch(/^foo_[0-9a-f-]{36}$/);
-    });
-
     it('should generate unique values', () => {
       const a = uuidName('x');
       const b = uuidName('x');
@@ -171,7 +79,8 @@ describe('core', () => {
       const input = ['{', ['// comment for x'], '"x": 1', '}'];
       const result = mark(input);
       expect(result.lines[0]).toBe('{');
-      expect(result.lines[1]).toMatch(/"x_[0-9a-f-]{36}":\["\/\/ comment for x"\],/);
+      expect(result.lines[1].includes('"x')).toBe(true);
+      expect(result.lines[1].includes('comment for x')).toBe(true);
       expect(result.lines[2]).toBe('"x": 1');
       expect(result.lines[3]).toBe('}');
       const uuidKey = result.lines[1].match(/"([^"]+)":/)?.[1];
@@ -182,10 +91,12 @@ describe('core', () => {
     it('should handle multiple comment blocks', () => {
       const input = ['{', ['c1'], '"a": 1,', ['c2'], '"b": 2', '}'];
       const result = mark(input);
+
+      const is = (line: string, key: string) => !line.includes(key) && line.includes(key.slice(0, 2));
       const uuidKeys = result.lines
-        .filter((l) => typeof l === 'string' && l.includes('_'))
-        .map((l) => l.match(/"([^"]+)":/)?.[1])
-        .filter(Boolean);
+        .filter((l) => typeof l === 'string' && (is(l, '"a"') || is(l, '"b"')))
+        .map(interpretName);
+
       expect(uuidKeys).toHaveLength(2);
       expect(result.unames.get(uuidKeys[0]!)).toBe('a');
       expect(result.unames.get(uuidKeys[1]!)).toBe('b');

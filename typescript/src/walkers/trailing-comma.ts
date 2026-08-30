@@ -34,6 +34,7 @@ const stripTrailingCommasWalker = new Walker('', {
         chars[lastCommaIndex] = null;
         break;
     }
+    chars.push(c);
   },
 });
 

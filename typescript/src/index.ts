@@ -38,22 +38,20 @@ export class JSONPC {
     try {
       this.data = reviver ? JSON.parse(rawJson, reviver) : JSON.parse(rawJson);
     } catch (e) {
-      console.log('text:', text);
-
       throw new Error(`Json text being parsed is invalid, ${(e as Error).message}`);
     }
 
     // & Now the json is some how valid.
 
     // Fill the whole file level comments
-    const itop = lines0.findIndex(_notComment) - 1;
-    const ibottom = lines0.findLastIndex(_notComment) + 1;
+    const start = lines0.findIndex(_notComment);
+    const end = lines0.findLastIndex(_notComment);
     //! Must be done first, or indexes will change.
-    if (ibottom !== -1 && ibottom <= lines0.length - 1) {
-      this.bottom = lines0.splice(ibottom).map(stripPrefix);
+    if (end !== -1 && end < lines0.length - 1) {
+      this.bottom = lines0.splice(end + 1).map(stripPrefix);
     }
-    if (itop > 0) {
-      this.top = lines0.splice(0, itop + 1).map(stripPrefix);
+    if (start > 0) {
+      this.top = lines0.splice(0, start).map(stripPrefix);
     }
 
     const { lines, unames } = mark(aggregate(lines0));
