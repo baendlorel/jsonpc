@@ -14,8 +14,14 @@ interface Entry {
 }
 
 export class JSONPC {
-  private _top: string[] = [];
-  private _bottom: string[] = [];
+  /**
+   * Comments at the top of the file.Carefully modify it.
+   */
+  public top: string[] = [];
+  /**
+   * Comments at the bottom of the file.Carefully modify it.
+   */
+  public bottom: string[] = [];
 
   /**
    * Map a property path to a comment string array.
@@ -46,33 +52,17 @@ export class JSONPC {
     // Fill the whole file level comments
     const start = lines0.findIndex(_notComment);
     const end = lines0.findLastIndex(_notComment);
-    //! Must be done first, or indexes will change.
+    // ! Must be done first, or indexes will change.
     if (end !== -1 && end < lines0.length - 1) {
-      this._bottom = lines0.splice(end + 1).map(_stripPrefix);
+      this.bottom = lines0.splice(end + 1).map(_stripPrefix);
     }
     if (start > 0) {
-      this._top = lines0.splice(0, start).map(_stripPrefix);
+      this.top = lines0.splice(0, start).map(_stripPrefix);
     }
 
     const { lines, unames } = mark(aggregate(lines0));
     this.data = JSON.parse(lines.join(''));
     this.comments = visit(this.data, unames);
-  }
-
-  get top(): string[] {
-    return this._top;
-  }
-
-  get bottom(): string[] {
-    return this._bottom;
-  }
-
-  set top(comments: string[]) {
-    this._top = [...comments];
-  }
-
-  set bottom(comments: string[]) {
-    this._bottom = [...comments];
   }
 
   /**
@@ -141,9 +131,9 @@ export class JSONPC {
     replacer?: ((this: any, key: string, value: any) => any) | (number | string)[] | null,
     space?: number,
   ): string {
-    const top = this._top.map((v) => `${COMMENT_PREFIX} ${v}`);
+    const top = this.top.map((v) => `${COMMENT_PREFIX} ${v}`);
     const lines = serialize(this.comments, this.data, space ?? 2, replacer ?? null);
-    const bottom = this._bottom.map((v) => `${COMMENT_PREFIX} ${v}`);
+    const bottom = this.bottom.map((v) => `${COMMENT_PREFIX} ${v}`);
 
     return top.concat(lines, bottom).join('\n');
   }
@@ -158,27 +148,12 @@ export class JSONPC {
   }
 
   /**
-   * Transform to standard JSON string without comments.
-   * Equal to `JSON.stringify(this.toJSON(), null, 2)`.
-   */
-  stringifyWithoutComment(
-    replacer?: ((this: any, key: string, value: any) => any) | null,
-    space?: string | number,
-  ): string;
-  stringifyWithoutComment(...args: any[]) {
-    return JSON.stringify(this.toObject(), ...args);
-  }
-
-  /**
    * Release the references, clear internal containers.
    */
   destroy() {
-    this._top.length = 0;
-    this._bottom.length = 0;
     this.comments.clear();
-
-    this._top = null as any;
-    this._bottom = null as any;
+    this.top = null as any;
+    this.bottom = null as any;
     this.data = null as any;
     this.comments = null as any;
   }
