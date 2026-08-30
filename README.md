@@ -1,29 +1,17 @@
 <div align="center">
 
-<img style="display:block;margin:auto" src="./assets/jsonpc.png" alt="jsonpc logo" width="480"/>
-
-
-**JSON with Property Comments** — A lightweight JSON variant that allows single-line comments `//` and trailing commas in JSON files.
-  
-[![npm version](
-https://img.shields.io/npm/v/jsonpc-ts.svg)](https://www.npmjs.com/package/jsonpc-ts) [![npm downloads](http://img.shields.io/npm/dm/jsonpc-ts.svg)](https://npmcharts.com/compare/jsonpc-ts,token-types?start=1200&interval=30)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/59dd6795e61949fb97066ca52e6097ef)](https://www.codacy.com/app/Borewit/jsonpc-ts?utm_source=github.com&utm_medium=referral&utm_content=Borewit/jsonpc-ts&utm_campaign=Badge_Grade)
-
-</div>
-
 ## Syntax
 
-**jsonpc** follows these rules for comment support:
+**jsonpc** follows these rules for comment:
 
 1. Trailing commas in arrays and objects are allowed
 2. Only single-line comments starting with `//` are supported
 3. Comments must occupy an entire line
-4. Multiple consecutive comment lines are allowed, but each must start with `//`
+4. Multiple consecutive comment lines are allowed
 5. Valid comment positions:
-  1. Top of the file (before any JSON content)
-  2. Bottom of the file (after all JSON content)
-  3. Above property names — Directly above a property name in an object
-
+   1. Top of the file (before any JSON content)
+   2. Bottom of the file (after all JSON content)
+   3. Above property names
 
 _Other positions and block comments are not allowed._
 
@@ -115,7 +103,6 @@ const clean = jsonpc.toObject();
 const jsonString = jsonpc.stringifyWithoutComment(null, 2);
 ```
 
-
 ## API
 
 ### `parse(text: string, reviver?): JSONPC`
@@ -172,9 +159,9 @@ The `updateArray` method supports these array operations:
 
 | Solution   | Custom Parser | Arbitrary Position Comments | Trailing Commas | Size   |
 | ---------- | ------------- | --------------------------- | --------------- | ------ |
-| **jsonpc** | ❌            | ❌                          | ✅              | Small  |
-| json5      | ✅            | ✅                          | ✅              | Large  |
-| JSONC      | ✅            | ✅                          | ❌              | Medium |
+| **jsonpc** | ❌             | ❌                           | ✅               | Small  |
+| json5      | ✅             | ✅                           | ✅               | Large  |
+| JSONC      | ✅             | ✅                           | ❌               | Medium |
 
 jsonpc trades some flexibility for simplicity and performance.
 

@@ -32,7 +32,8 @@ writeFileSync(join(import.meta.dirname, 'package.json'), JSON.stringify(pkg, nul
 const readme = readFileSync(join(import.meta.dirname, '..', 'README.md'), 'utf-8');
 writeFileSync(
   join(import.meta.dirname, 'README.md'),
-  readme.replace(`src="./assets/jsonpc.png"`, `src="../assets/jsonpc.png"`),
+  // readme.replace(`src="./assets/jsonpc.png"`, `src="../assets/jsonpc.png"`),
+  readme,
   'utf-8',
 );
 
