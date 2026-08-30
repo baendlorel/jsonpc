@@ -85,10 +85,10 @@ describe('core', () => {
       const input = ['{', ['c1'], '"a": 1,', ['c2'], '"b": 2', '}'];
       const result = mark(input);
 
-      const is = (line: string, key: string) => !line.includes(key) && line.includes(key.slice(0, 2));
       const uuidKeys = result.lines
-        .filter((l) => typeof l === 'string' && (is(l, '"a"') || is(l, '"b"')))
-        .map(interpretName);
+        .filter((l) => typeof l === 'string' && l.startsWith('"'))
+        .map(interpretName)
+        .filter(isUname);
 
       expect(uuidKeys).toHaveLength(2);
       expect(result.unames.get(uuidKeys[0]!)).toBe('a');
@@ -167,7 +167,7 @@ describe('core', () => {
 
     it('should return undefined for properties without comments', () => {
       const jpc = new JSONPC(sampleText);
-      expect(getComments(jpc, 'nested')).toBeTruthy();
+      expect(getComments(jpc, 'nested')).toBeUndefined();
       expect(getComments(jpc, 'nonexistent')).toBeUndefined();
     });
 
