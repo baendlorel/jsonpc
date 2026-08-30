@@ -6,6 +6,9 @@ export function isComment(t: string) {
 
 export function split(propPath: string | string[]): string[] {
   if (_isArray(propPath)) {
+    if (propPath.length === 0) {
+      throw new TypeError(`Invalid propPath argument, must be a non-empty array of strings.`);
+    }
     return propPath;
   } else if (typeof propPath === 'string') {
     return propPath.split('.');
