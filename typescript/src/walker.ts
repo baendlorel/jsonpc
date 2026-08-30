@@ -8,7 +8,7 @@ export const enum Side {
 }
 
 interface WalkerHandlerArgs {
-  index: number;
+  i: number;
 }
 
 interface WalkerHandlerArgsWithSides extends WalkerHandlerArgs {
@@ -27,11 +27,16 @@ interface WalkerOptions {
   onQuote: (args: WalkerHandlerArgsWithSides) => void;
   onBrace: (args: WalkerHandlerArgsWithSides) => void;
   onBracket: (args: WalkerHandlerArgsWithSides) => void;
+  /**
+   * Triggers when `inString === true` and char is `\`, which means the next char is escaped.
+   */
+  onEscape: (args: WalkerHandlerArgs) => void;
 
   /**
    * Triggers when char is none of above.
    */
   onOther: (args: WalkerHandlerArgs) => void;
+  afterChar: (args: WalkerHandlerArgs) => void;
 }
 
 export function walk(text: string, handlers: Partial<WalkerOptions>) {
@@ -43,62 +48,57 @@ export function walk(text: string, handlers: Partial<WalkerOptions>) {
     onQuote = _noop,
     onBrace = _noop,
     onBracket = _noop,
+    onEscape = _noop,
     onOther = _noop,
+    afterChar = _noop,
   } = handlers;
 
   let inString = false;
-  let escaped = false;
 
   for (let i = start; i < end; i++) {
-    const char = text[i];
+    const c = text[i];
 
-    // Handle escape sequences
-    if (escaped) {
-      escaped = false;
-      continue;
-    }
-
-    if (char === '\\') {
-      escaped = true;
-      continue;
-    }
-
-    // Handle characters inside strings
-    if (inString) {
-      if (char === '"') {
+    if (c === '\\') {
+      onEscape({ i });
+      // ! This could only appear inside a string. So inString must be true here.
+      i++; // Skip the next character, as it's escaped
+    } else if (inString) {
+      if (c === '"') {
         inString = false;
-        onQuote({ index: i, side: Side.Right });
+        onQuote({ i, side: Side.Right });
+      } else {
+        onOther({ i });
       }
-      continue;
+    } else {
+      // Handle characters outside strings
+      switch (c) {
+        case ',':
+          onComma({ i });
+          break;
+        case ':':
+          onColon({ i });
+          break;
+        case '"':
+          inString = true;
+          onQuote({ i, side: Side.Left });
+          break;
+        case '{':
+          onBrace({ i, side: Side.Left });
+          break;
+        case '}':
+          onBrace({ i, side: Side.Right });
+          break;
+        case '[':
+          onBracket({ i, side: Side.Left });
+          break;
+        case ']':
+          onBracket({ i, side: Side.Right });
+          break;
+        default:
+          onOther({ i });
+          break;
+      }
     }
-
-    // Handle characters outside strings
-    switch (char) {
-      case ',':
-        onComma({ index: i });
-        break;
-      case ':':
-        onColon({ index: i });
-        break;
-      case '"':
-        inString = true;
-        onQuote({ index: i, side: Side.Left });
-        break;
-      case '{':
-        onBrace({ index: i, side: Side.Left });
-        break;
-      case '}':
-        onBrace({ index: i, side: Side.Right });
-        break;
-      case '[':
-        onBracket({ index: i, side: Side.Left });
-        break;
-      case ']':
-        onBracket({ index: i, side: Side.Right });
-        break;
-      default:
-        onOther({ index: i });
-        break;
-    }
+    afterChar({ i });
   }
 }
