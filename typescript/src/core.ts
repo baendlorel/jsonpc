@@ -1,10 +1,10 @@
 import { get as _get, set as _set } from 'reflect-deep';
 import { _isArray, _keys } from './common.js';
-import { walk, Side } from './walker.js';
+import { walk, Side, WalkerHandlerArgsWithSides } from './walker.js';
 
 export const notComment = (t: string) => !t.startsWith(COMMENT_PREFIX);
 
-export function split(path: string | string[]): string[] {
+export const split = (path: string | string[]): string[] => {
   if (typeof path === 'string') {
     return path.split('.');
   }
@@ -12,12 +12,9 @@ export function split(path: string | string[]): string[] {
     return path;
   }
   throw new TypeError(`Invalid propPath, must be string | string[].`);
-}
+};
 
-export function stripPrefix(t: string): string {
-  return t.replace(COMMENT_PREFIX, '').trimStart();
-}
-
+export const stripPrefix = (t: string) => t.replace(COMMENT_PREFIX, '').trimStart();
 /**
  * Multiple comment lines will be collapsed into a string array.
  * Comment prefix `//` is stripped from each line.
@@ -40,41 +37,52 @@ export function aggregate(lines: string[]): Array<string | string[]> {
   return modified;
 }
 
+const enum WalkState {
+  Idle,
+  Start,
+  Searching,
+  Found,
+}
+
 export function interpretName(line: string) {
   if (line[0] !== '"') {
     throw new Error(`Comments are only allowed directly above property names`);
   }
   const chars: string[] = [];
-  let findingEndQuote = 0;
-  let foundEndQuote = false;
+  let state = WalkState.Idle;
   walk(line, {
     start: 1,
     inString: true,
     onStringContent: ({ c }) => chars.push(c),
     onQuote({ side }) {
       if (side === Side.Right) {
-        findingEndQuote = 1;
+        state = WalkState.Start;
       }
     },
     afterChar({ c }, stop) {
-      switch (findingEndQuote) {
-        case 0:
-          return;
-        case 1:
-          findingEndQuote = 2;
-          return;
-        default:
+      switch (state) {
+        case WalkState.Idle:
+          break;
+        case WalkState.Start:
+          state = WalkState.Searching;
+          break;
+        case WalkState.Searching:
           if (c === ':') {
-            foundEndQuote = true;
+            state = WalkState.Found;
             stop();
+            return;
           } else if (c.trim() !== '') {
             throw new Error(`Unexpected character after property name: ${line}`);
           }
+          break;
+        case WalkState.Found: // This won't happen, but just in case.
+          stop();
+          break;
       }
     },
   });
 
-  if (!foundEndQuote) {
+  if ((state as WalkState) !== WalkState.Found) {
     throw new Error(`Cannot find ending quote: ${line}`);
   }
 
@@ -92,36 +100,46 @@ export function interpretName(line: string) {
 export function stripTrailingCommas(text: string) {
   const chars: (string | null)[] = text.split('');
 
-  let state = 0;
+  let lastCommaIndex = -1;
+  let state: WalkState = WalkState.Idle;
+
+  const onBrace = ({ side }: WalkerHandlerArgsWithSides) => {
+    if (side === Side.Right && state === WalkState.Searching) {
+      state = WalkState.Found;
+    }
+  };
+
   walk(text, {
-    onComma() {},
-    onBrace({ side }) {
-      // TODO 先记录comma，然后从comma忽略空字符到下一个右侧的brace、bracket，才删除
-      if (side === Side.Right) {
-        state = 1;
-      }
+    onComma({ i }) {
+      state = WalkState.Start;
+      lastCommaIndex = i;
     },
-    onBracket({ side }) {
-      if (side === Side.Right) {
-        state = 1;
+    onBrace,
+    onBracket: onBrace,
+    afterChar({ c }) {
+      switch (state) {
+        case WalkState.Idle:
+          break;
+        case WalkState.Start:
+          state = WalkState.Searching;
+          break;
+        case WalkState.Searching:
+          if (c.trim() !== '') {
+            state = WalkState.Idle;
+          }
+          break;
+        case WalkState.Found:
+          state = WalkState.Idle;
+          chars[lastCommaIndex] = null;
+          break;
       }
     },
   });
 
-  function removeTrailingCommaAt(closeBracketIndex: number) {
-    let j = closeBracketIndex - 1;
-    while (j >= 0 && isSpace(chars[j])) {
-      j--;
-    }
-    if (j >= 0 && chars[j] === ',') {
-      chars[j] = null as any;
-    }
-  }
-
   return chars.filter((c) => c !== null).join('');
 }
 
-let r = () => Math.random() * 43 + 48;
+const r = () => Math.random() * 43 + 48;
 export const uuidName = (origin: string) => origin + String.fromCharCode(r(), r(), r(), r(), r(), r(), r());
 
 /**
@@ -185,11 +203,6 @@ export function visit(o: any, unames: Map<string, string>, path: string[] = [], 
   }
   return commentMap;
 }
-
-/**
- * This can be done because pure JSON is simple enough, and we don't need to worry about circular references.
- */
-export const clone: (o: any) => any = structuredClone || ((o: any) => JSON.parse(JSON.stringify(o)));
 
 /**
  * Serialize a value, appending lines to `lines`.

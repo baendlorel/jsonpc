@@ -5,12 +5,12 @@ export const enum Side {
   Right,
 }
 
-interface WalkerHandlerArgs {
+export interface WalkerHandlerArgs {
   i: number;
   c: string;
 }
 
-interface WalkerHandlerArgsWithSides extends WalkerHandlerArgs {
+export interface WalkerHandlerArgsWithSides extends WalkerHandlerArgs {
   side: Side;
 }
 
@@ -39,6 +39,8 @@ interface WalkerOptions {
   onOther: (args: WalkerHandlerArgs, stop: () => void) => void;
   afterChar: (args: WalkerHandlerArgs, stop: () => void) => void;
 }
+
+// TODO 感觉反复创建walk可能无必要，可以重设、复用
 
 export function walk(text: string, handlers: Partial<WalkerOptions>) {
   const {

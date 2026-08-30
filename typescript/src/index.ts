@@ -1,15 +1,5 @@
 import { get as _get, set as _set, has as _has, deleteProperty as _delete } from 'reflect-deep';
-import {
-  notComment,
-  aggregate,
-  stripPrefix,
-  mark,
-  visit,
-  clone,
-  serialize,
-  split,
-  stripTrailingCommas,
-} from './core.js';
+import { notComment, aggregate, stripPrefix, mark, visit, serialize, split, stripTrailingCommas } from './core.js';
 import { _isArray, _comments } from './common.js';
 import { arrayOpers, getArray, SupportedArrayMethods } from './array.js';
 
@@ -163,7 +153,7 @@ export class JSONPC {
    *   so this is a simple deep clone.
    */
   toObject<T = any>(): T {
-    return clone(this.data) as T;
+    return structuredClone(this.data) as T;
   }
 
   /**
