@@ -51,6 +51,6 @@
     "vitest": "^4.1.11"
   },
   "dependencies": {
-    "reflect-deep": "^2.1.0"
+    "reflect-deep": "^2.1.1"
   }
 }
