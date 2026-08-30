@@ -40,77 +40,99 @@ interface WalkerOptions {
   afterChar: (args: WalkerHandlerArgs, stop: () => void) => void;
 }
 
-// TODO 感觉反复创建walk可能无必要，可以重设、复用
+export class Walker {
+  text: string;
+  start: number;
+  end: number;
+  inString: boolean;
+  onComma: WalkerOptions['onComma'];
+  onColon: WalkerOptions['onColon'];
+  onQuote: WalkerOptions['onQuote'];
+  onBrace: WalkerOptions['onBrace'];
+  onBracket: WalkerOptions['onBracket'];
+  onEscape: WalkerOptions['onEscape'];
+  onStringContent: WalkerOptions['onStringContent'];
+  onOther: WalkerOptions['onOther'];
+  afterChar: WalkerOptions['afterChar'];
 
-export function walk(text: string, handlers: Partial<WalkerOptions>) {
-  const {
-    start = 0,
-    onComma = _noop,
-    onColon = _noop,
-    onQuote = _noop,
-    onBrace = _noop,
-    onBracket = _noop,
-    onEscape = _noop,
-    onStringContent = _noop,
-    onOther = _noop,
-    afterChar = _noop,
-  } = handlers;
+  private stop = () => (this.end = NaN);
 
-  let end = handlers.end ?? text.length;
-  let inString = handlers.inString ?? false;
-  let stop = () => (end = NaN);
+  constructor(text: string, handlers: Partial<WalkerOptions>) {
+    this.text = text;
+    this.start = handlers.start ?? 0;
+    this.end = handlers.end ?? text.length;
+    this.inString = handlers.inString ?? false;
+    this.onComma = handlers.onComma ?? _noop;
+    this.onColon = handlers.onColon ?? _noop;
+    this.onQuote = handlers.onQuote ?? _noop;
+    this.onBrace = handlers.onBrace ?? _noop;
+    this.onBracket = handlers.onBracket ?? _noop;
+    this.onEscape = handlers.onEscape ?? _noop;
+    this.onStringContent = handlers.onStringContent ?? _noop;
+    this.onOther = handlers.onOther ?? _noop;
+    this.afterChar = handlers.afterChar ?? _noop;
+  }
 
-  let escaped = false;
-  for (let i = start; i < end; i++) {
-    const c = text[i];
+  reset(args: { text?: string; start?: number; end?: number; inString?: boolean }) {
+    if ('text' in args) this.text = args.text!;
+    if ('start' in args) this.start = args.start!;
+    if ('end' in args) this.end = args.end!;
+    if ('inString' in args) this.inString = args.inString!;
+  }
 
-    if (escaped) {
-      escaped = false;
-      onStringContent({ i, c }, stop);
-    } else if (c === '\\') {
-      if (!inString) {
-        throw new Error(`Unexpected escape character at position ${i} outside of a string.`);
-      }
-      escaped = true;
-      onEscape({ i, c }, stop);
-      onStringContent({ i, c }, stop);
-    } else if (inString) {
-      if (c === '"') {
-        inString = false;
-        onQuote({ i, c, side: Side.Right }, stop);
+  run() {
+    let escaped = false;
+    for (let i = this.start; i < this.end; i++) {
+      const c = this.text[i];
+
+      if (escaped) {
+        escaped = false;
+        this.onStringContent({ i, c }, this.stop);
+      } else if (c === '\\') {
+        if (!this.inString) {
+          throw new Error(`Unexpected escape character at position ${i} outside of a string.`);
+        }
+        escaped = true;
+        this.onEscape({ i, c }, this.stop);
+        this.onStringContent({ i, c }, this.stop);
+      } else if (this.inString) {
+        if (c === '"') {
+          this.inString = false;
+          this.onQuote({ i, c, side: Side.Right }, this.stop);
+        } else {
+          this.onStringContent({ i, c }, this.stop);
+        }
       } else {
-        onStringContent({ i, c }, stop);
+        // Handle characters outside strings
+        switch (c) {
+          case ',':
+            this.onComma({ i, c }, this.stop);
+            break;
+          case ':':
+            this.onColon({ i, c }, this.stop);
+            break;
+          case '"':
+            this.inString = true;
+            this.onQuote({ i, c, side: Side.Left }, this.stop);
+            break;
+          case '{':
+            this.onBrace({ i, c, side: Side.Left }, this.stop);
+            break;
+          case '}':
+            this.onBrace({ i, c, side: Side.Right }, this.stop);
+            break;
+          case '[':
+            this.onBracket({ i, c, side: Side.Left }, this.stop);
+            break;
+          case ']':
+            this.onBracket({ i, c, side: Side.Right }, this.stop);
+            break;
+          default:
+            this.onOther({ i, c }, this.stop);
+            break;
+        }
       }
-    } else {
-      // Handle characters outside strings
-      switch (c) {
-        case ',':
-          onComma({ i, c }, stop);
-          break;
-        case ':':
-          onColon({ i, c }, stop);
-          break;
-        case '"':
-          inString = true;
-          onQuote({ i, c, side: Side.Left }, stop);
-          break;
-        case '{':
-          onBrace({ i, c, side: Side.Left }, stop);
-          break;
-        case '}':
-          onBrace({ i, c, side: Side.Right }, stop);
-          break;
-        case '[':
-          onBracket({ i, c, side: Side.Left }, stop);
-          break;
-        case ']':
-          onBracket({ i, c, side: Side.Right }, stop);
-          break;
-        default:
-          onOther({ i, c }, stop);
-          break;
-      }
+      this.afterChar({ i, c }, this.stop);
     }
-    afterChar({ i, c }, stop);
   }
 }

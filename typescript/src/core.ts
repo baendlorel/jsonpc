@@ -1,6 +1,6 @@
 import { get as _get, set as _set } from 'reflect-deep';
 import { _isArray, _keys } from './common.js';
-import { walk, Side, WalkerHandlerArgsWithSides } from './walker.js';
+import { Walker, Side, WalkerHandlerArgsWithSides } from './walker.js';
 
 export const notComment = (t: string) => !t.startsWith(COMMENT_PREFIX);
 
@@ -50,7 +50,8 @@ export function interpretName(line: string) {
   }
   const chars: string[] = [];
   let state = WalkState.Idle;
-  walk(line, {
+
+  new Walker(line, {
     start: 1,
     inString: true,
     onStringContent: ({ c }) => chars.push(c),
@@ -80,7 +81,7 @@ export function interpretName(line: string) {
           break;
       }
     },
-  });
+  }).run();
 
   if ((state as WalkState) !== WalkState.Found) {
     throw new Error(`Cannot find ending quote: ${line}`);
@@ -109,7 +110,7 @@ export function stripTrailingCommas(text: string) {
     }
   };
 
-  walk(text, {
+  new Walker(text, {
     onComma({ i }) {
       state = WalkState.Start;
       lastCommaIndex = i;
