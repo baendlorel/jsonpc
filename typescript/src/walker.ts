@@ -31,6 +31,7 @@ interface WalkerOptions {
    * Triggers when `inString === true` and char is `\`, which means the next char is escaped.
    */
   onEscape: (args: WalkerHandlerArgs, stop: () => void) => void;
+  onStringContent: (args: WalkerHandlerArgs, stop: () => void) => void;
 
   /**
    * Triggers when char is none of above.
@@ -48,6 +49,7 @@ export function walk(text: string, handlers: Partial<WalkerOptions>) {
     onBrace = _noop,
     onBracket = _noop,
     onEscape = _noop,
+    onStringContent = _noop,
     onOther = _noop,
     afterChar = _noop,
   } = handlers;
@@ -63,19 +65,20 @@ export function walk(text: string, handlers: Partial<WalkerOptions>) {
 
     if (escaped) {
       escaped = false;
-      onOther({ i }, stop);
+      onStringContent({ i }, stop);
     } else if (c === '\\') {
       if (!inString) {
         throw new Error(`Unexpected escape character at position ${i} outside of a string.`);
       }
       escaped = true;
       onEscape({ i }, stop);
+      onStringContent({ i }, stop);
     } else if (inString) {
       if (c === '"') {
         inString = false;
         onQuote({ i, side: Side.Right }, stop);
       } else {
-        onOther({ i }, stop);
+        onStringContent({ i }, stop);
       }
     } else {
       // Handle characters outside strings

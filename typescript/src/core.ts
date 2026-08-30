@@ -1,5 +1,6 @@
 import { get as _get, set as _set } from 'reflect-deep';
 import { _isArray, _keys } from './common.js';
+import { walk, isSpace, Side, walkStringContent } from './walker.js';
 
 export const notComment = (t: string) => !t.startsWith(COMMENT_PREFIX);
 
@@ -41,18 +42,6 @@ export function aggregate(lines: string[]): Array<string | string[]> {
 
 // TODO 扫描器写了很多地方，是不是要直接写一个walker算了？
 
-function nextNonSpaceIsColon(line: string, start: number) {
-  for (let i = start; i < line.length; i++) {
-    if (_isSpace(line[i])) {
-      continue;
-    } else if (line[i] === ':') {
-      return true;
-    } else {
-      return false;
-    }
-  }
-  return false;
-}
 
 /**
  * & Since comments are only allowed to appear above property names.
@@ -65,32 +54,31 @@ export function interpretName(line: string) {
   if (line.startsWith('""')) {
     return '';
   }
-  if (line.length < 3) {
-    throw new Error(`Invalid line: ${line}`);
-  }
 
   const chars: string[] = [];
-  let escaping = false;
-  let finish = false;
-  for (let i = 1; i < line.length; i++) {
-    const c = line[i];
-    if (escaping) {
-      chars.push(c); // Add the escaped character
-      escaping = false;
-      continue;
-    }
+  let foundEndQuote = false;
 
-    if (c === '\\') {
-      escaping = true;
-    } else if (c === '"' && nextNonSpaceIsColon(line, i + 1)) {
-      finish = true;
-      break;
-    } else {
+  walkStringContent(line, {
+    onChar: (_i, c, _stop) => {
       chars.push(c);
-    }
-  }
+    },
+    onEscape: (_i, _stop) => {
+      // Skip the backslash itself, next char will be added via onChar
+    },
+    onEndQuote: (i, stop) => {
+      // Check if next non-space char is colon
+      let j = i + 1;
+      while (j < line.length && isSpace(line[j])) {
+        j++;
+      }
+      if (j < line.length && line[j] === ':') {
+        foundEndQuote = true;
+        stop();
+      }
+    },
+  }, 1);
 
-  if (!finish) {
+  if (!foundEndQuote) {
     throw new Error(`Cannot find 2nd '"': ${line}`);
   }
 
@@ -107,37 +95,27 @@ export function interpretName(line: string) {
  */
 export function stripTrailingCommas(text: string) {
   const chars: (string | null)[] = [...text];
-  let inString = false;
-  let escape = false;
 
-  for (let i = 0; i < chars.length; i++) {
-    const ch = chars[i];
-
-    if (inString) {
-      if (escape) {
-        escape = false;
-      } else if (ch === '\\') {
-        escape = true;
-      } else if (ch === '"') {
-        inString = false;
+  walk(text, {
+    onBrace: ({ i, side }) => {
+      if (side === Side.Right) {
+        removeTrailingCommaAt(i);
       }
-      continue;
+    },
+    onBracket: ({ i, side }) => {
+      if (side === Side.Right) {
+        removeTrailingCommaAt(i);
+      }
+    },
+  });
+
+  function removeTrailingCommaAt(closeBracketIndex: number) {
+    let j = closeBracketIndex - 1;
+    while (j >= 0 && isSpace(chars[j])) {
+      j--;
     }
-
-    if (ch === '"') {
-      inString = true;
-      continue;
-    }
-
-    if (ch === '}' || ch === ']') {
-      let j = i - 1;
-      // ! chars[j] is definitely non-null for a valid json.
-      while (j >= 0 && _isSpace(chars[j])) {
-        j--;
-      }
-      if (j >= 0 && chars[j] === ',') {
-        chars[j] = null as any;
-      }
+    if (j >= 0 && chars[j] === ',') {
+      chars[j] = null as any;
     }
   }
 
