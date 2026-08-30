@@ -21,6 +21,7 @@ interface WalkerHandlerArgsWithSides extends WalkerHandlerArgs {
 interface WalkerOptions {
   start: number;
   end: number;
+  inString: boolean;
 
   onComma: (args: WalkerHandlerArgs, stop: () => void) => void;
   onColon: (args: WalkerHandlerArgs, stop: () => void) => void;
@@ -55,11 +56,10 @@ export function walk(text: string, handlers: Partial<WalkerOptions>) {
   } = handlers;
 
   let end = handlers.end ?? text.length;
-  const stop = () => (end = NaN);
+  let inString = handlers.inString ?? false;
+  let stop = () => (end = NaN);
 
-  let inString = false;
   let escaped = false;
-
   for (let i = start; i < end; i++) {
     const c = text[i];
 
