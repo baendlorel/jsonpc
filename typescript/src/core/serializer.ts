@@ -9,6 +9,7 @@ interface Entry {
 }
 
 const appendLast = (lines: string[], s: string) => (lines[lines.length - 1] += s);
+const isArrayStart = (lines: string[]) => lines.length === 0 || lines[lines.length - 1].endsWith('[');
 
 /**
  * Serialize a value, appending lines to `lines`.
@@ -25,11 +26,13 @@ export function serialize(
 ): string[] {
   const prefix = ' '.repeat(depth * pad);
 
+  // # Primitive
   if (obj === null || typeof obj !== 'object') {
     lines.push(`${prefix}${_stringify(obj, null, pad)}`);
     return lines;
   }
 
+  // # Array
   if (_isArray(obj)) {
     if (obj.length === 0) {
       appendLast(lines, `[]`);
@@ -39,7 +42,7 @@ export function serialize(
     /**
      * @see same logic about '{' below.
      */
-    if (lines.length === 0 || lines[lines.length - 1].endsWith('[')) {
+    if (isArrayStart(lines)) {
       lines.push(`${prefix}[`);
     } else {
       appendLast(lines, `[`);
@@ -56,7 +59,7 @@ export function serialize(
     return lines;
   }
 
-  // Plain object
+  // # Plain object
   const keys = _keys(obj);
   if (keys.length === 0) {
     lines.push(`${prefix}{}`);
@@ -95,7 +98,7 @@ export function serialize(
    *   }
    * }
    */
-  if (lines.length === 0 || lines[lines.length - 1].endsWith('[')) {
+  if (isArrayStart(lines)) {
     lines.push(`${prefix}{`);
   } else {
     appendLast(lines, `{`);
