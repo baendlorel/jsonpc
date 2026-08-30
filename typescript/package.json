@@ -9,11 +9,17 @@
   "description": "This is a lightweight JSON variant that allows comments under certain conditions.",
   "description_zh": "这是一个轻量级的、可以写注释的json，注释满足一定条件",
   "type": "module",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      },
       "default": "./dist/index.mjs"
     }
   },

@@ -1,6 +1,6 @@
 import { get as _get, set as _set } from 'reflect-deep';
 import { _isArray, _keys } from './common.js';
-import { walk, isSpace, Side, walkStringContent } from './walker.js';
+import { walk, Side } from './walker.js';
 
 export const notComment = (t: string) => !t.startsWith(COMMENT_PREFIX);
 
@@ -40,46 +40,42 @@ export function aggregate(lines: string[]): Array<string | string[]> {
   return modified;
 }
 
-// TODO 扫描器写了很多地方，是不是要直接写一个walker算了？
-
-
-/**
- * & Since comments are only allowed to appear above property names.
- * & It's guaranteed that the next line is a property name line starts with '"'.
- */
 export function interpretName(line: string) {
   if (line[0] !== '"') {
     throw new Error(`Comments are only allowed directly above property names`);
   }
-  if (line.startsWith('""')) {
-    return '';
-  }
-
   const chars: string[] = [];
+  let findingEndQuote = 0;
   let foundEndQuote = false;
-
-  walkStringContent(line, {
-    onChar: (_i, c, _stop) => {
-      chars.push(c);
-    },
-    onEscape: (_i, _stop) => {
-      // Skip the backslash itself, next char will be added via onChar
-    },
-    onEndQuote: (i, stop) => {
-      // Check if next non-space char is colon
-      let j = i + 1;
-      while (j < line.length && isSpace(line[j])) {
-        j++;
-      }
-      if (j < line.length && line[j] === ':') {
-        foundEndQuote = true;
-        stop();
+  walk(line, {
+    start: 1,
+    inString: true,
+    onStringContent: ({ c }) => chars.push(c),
+    onQuote({ side }) {
+      if (side === Side.Right) {
+        findingEndQuote = 1;
       }
     },
-  }, 1);
+    afterChar({ c }, stop) {
+      switch (findingEndQuote) {
+        case 0:
+          return;
+        case 1:
+          findingEndQuote = 2;
+          return;
+        default:
+          if (c === ':') {
+            foundEndQuote = true;
+            stop();
+          } else if (c.trim() !== '') {
+            throw new Error(`Unexpected character after property name: ${line}`);
+          }
+      }
+    },
+  });
 
   if (!foundEndQuote) {
-    throw new Error(`Cannot find 2nd '"': ${line}`);
+    throw new Error(`Cannot find ending quote: ${line}`);
   }
 
   return chars.join('');
@@ -94,17 +90,20 @@ export function interpretName(line: string) {
  * 3. Comments satisfies the rules of JSONPC.
  */
 export function stripTrailingCommas(text: string) {
-  const chars: (string | null)[] = [...text];
+  const chars: (string | null)[] = text.split('');
 
+  let state = 0;
   walk(text, {
-    onBrace: ({ i, side }) => {
+    onComma() {},
+    onBrace({ side }) {
+      // TODO 先记录comma，然后从comma忽略空字符到下一个右侧的brace、bracket，才删除
       if (side === Side.Right) {
-        removeTrailingCommaAt(i);
+        state = 1;
       }
     },
-    onBracket: ({ i, side }) => {
+    onBracket({ side }) {
       if (side === Side.Right) {
-        removeTrailingCommaAt(i);
+        state = 1;
       }
     },
   });

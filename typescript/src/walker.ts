@@ -1,7 +1,5 @@
 import { _noop } from './common.js';
 
-export const isSpace = (t: unknown) => t === ' ' || t === '\t' || t === '\r' || t === '\n';
-
 export const enum Side {
   Left,
   Right,
@@ -9,6 +7,7 @@ export const enum Side {
 
 interface WalkerHandlerArgs {
   i: number;
+  c: string;
 }
 
 interface WalkerHandlerArgsWithSides extends WalkerHandlerArgs {
@@ -65,51 +64,51 @@ export function walk(text: string, handlers: Partial<WalkerOptions>) {
 
     if (escaped) {
       escaped = false;
-      onStringContent({ i }, stop);
+      onStringContent({ i, c }, stop);
     } else if (c === '\\') {
       if (!inString) {
         throw new Error(`Unexpected escape character at position ${i} outside of a string.`);
       }
       escaped = true;
-      onEscape({ i }, stop);
-      onStringContent({ i }, stop);
+      onEscape({ i, c }, stop);
+      onStringContent({ i, c }, stop);
     } else if (inString) {
       if (c === '"') {
         inString = false;
-        onQuote({ i, side: Side.Right }, stop);
+        onQuote({ i, c, side: Side.Right }, stop);
       } else {
-        onStringContent({ i }, stop);
+        onStringContent({ i, c }, stop);
       }
     } else {
       // Handle characters outside strings
       switch (c) {
         case ',':
-          onComma({ i }, stop);
+          onComma({ i, c }, stop);
           break;
         case ':':
-          onColon({ i }, stop);
+          onColon({ i, c }, stop);
           break;
         case '"':
           inString = true;
-          onQuote({ i, side: Side.Left }, stop);
+          onQuote({ i, c, side: Side.Left }, stop);
           break;
         case '{':
-          onBrace({ i, side: Side.Left }, stop);
+          onBrace({ i, c, side: Side.Left }, stop);
           break;
         case '}':
-          onBrace({ i, side: Side.Right }, stop);
+          onBrace({ i, c, side: Side.Right }, stop);
           break;
         case '[':
-          onBracket({ i, side: Side.Left }, stop);
+          onBracket({ i, c, side: Side.Left }, stop);
           break;
         case ']':
-          onBracket({ i, side: Side.Right }, stop);
+          onBracket({ i, c, side: Side.Right }, stop);
           break;
         default:
-          onOther({ i }, stop);
+          onOther({ i, c }, stop);
           break;
       }
     }
-    afterChar({ i }, stop);
+    afterChar({ i, c }, stop);
   }
 }
