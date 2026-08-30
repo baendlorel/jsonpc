@@ -99,7 +99,7 @@ export function interpretName(line: string) {
   if (line.startsWith('""')) {
     return '';
   }
-  if (line.length <= 3) {
+  if (line.length < 3) {
     throw new Error(`Invalid line: ${line}`);
   }
 

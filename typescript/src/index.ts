@@ -60,6 +60,30 @@ export class JSONPC {
     this.commentMap = visit(this.data, named.unames);
   }
 
+  setTopComments(comments: string[]): this {
+    if (!_isArray(comments)) {
+      throw new TypeError(`Invalid comments argument, must be an array of strings or a function.`);
+    }
+    this.top = [...comments];
+    return this;
+  }
+
+  setBottomComments(comments: string[]): this {
+    if (!_isArray(comments)) {
+      throw new TypeError(`Invalid comments argument, must be an array of strings or a function.`);
+    }
+    this.bottom = [...comments];
+    return this;
+  }
+
+  getTopComments(): string[] {
+    return [...this.top];
+  }
+
+  getBottomComments(): string[] {
+    return [...this.bottom];
+  }
+
   /**
    * Set comment for a property path.
    * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
@@ -170,7 +194,6 @@ export class JSONPC {
     this.commentMap.clear();
 
     this.top = null as any;
-    this.bottom = null as any;
     this.bottom = null as any;
     this.data = null as any;
     this.commentMap = null as any;
