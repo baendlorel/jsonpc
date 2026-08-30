@@ -1,7 +1,6 @@
 import { get as _get, set as _set } from 'reflect-deep';
 import { _isArray, _keys, _notComment } from './common.js';
-import { Walker, Side, WalkerHandlerArgsWithSides } from './walker.class.js';
-import { interpretName } from './walkers.js';
+import { interpretName } from '../walkers/interpret-name.js';
 
 export const split = (path: string | string[]): string[] => {
   if (typeof path === 'string') {

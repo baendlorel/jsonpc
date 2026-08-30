@@ -2,7 +2,7 @@ import { get as _get, set as _set, has as _has, deleteProperty as _delete } from
 import { aggregate, stripPrefix, mark, visit, serialize, split } from './core/initializers.js';
 import { _isArray, _comments, _notComment } from './core/common.js';
 import { arrayOpers, getArray, SupportedArrayMethods } from './core/array.js';
-import { stripTrailingCommas } from './core/walkers.js';
+import { stripTrailingCommas } from './walkers/trailing-comma.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
   (globalThis as any).COMMENT_PREFIX = '//';
