@@ -38,6 +38,8 @@ export class JSONPC {
     try {
       this.data = reviver ? JSON.parse(rawJson, reviver) : JSON.parse(rawJson);
     } catch (e) {
+      console.log('text:', text);
+
       throw new Error(`Json text being parsed is invalid, ${(e as Error).message}`);
     }
 
