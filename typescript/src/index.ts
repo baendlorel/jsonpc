@@ -163,6 +163,7 @@ export class JSONPC {
    *   so this is a simple deep clone.
    */
   toObject<T = any>(): T {
+    // TODO 新写法会导致这里结构不对
     return structuredClone(this.data) as T;
   }
 

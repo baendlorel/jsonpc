@@ -1,5 +1,6 @@
 import { _isArray, _isObject, _keys, _stringify } from './common.js';
 import { _get } from './path-map.js';
+import { Value } from './value.js';
 
 // Collect entries with their values resolved through replacer
 interface Entry {
@@ -18,7 +19,7 @@ const isArrayStart = (lines: string[]) => lines.length === 0 || lines[lines.leng
 export function serialize(
   data: any,
   pad: number,
-  replacer: ((this: any, key: string, value: any) => any) | (number | string)[],
+  replacer: (this: any, key: string, value: any) => any,
   depth: number = 0,
   path: any[] = [],
   lines: string[] = [],
@@ -48,7 +49,7 @@ export function serialize(
     }
 
     for (let i = 0; i < data.length; i++) {
-      const subdata = typeof replacer === 'function' ? replacer.call(data, String(i), data[i]) : data[i];
+      const subdata = replacer.call(data, String(i), data[i]);
       serialize(subdata, pad, replacer, depth + 1, [...path, i], lines);
 
       // * trailing comma for array elements
@@ -65,14 +66,11 @@ export function serialize(
     return lines;
   }
 
-  const entries: Entry[] = keys.map((k) => {
-    const v = typeof replacer === 'function' ? replacer.call(data, k, data[k]) : data[k];
-    return {
-      k,
-      v,
-      path: path.concat(k),
-    };
-  });
+  const entries: Entry[] = keys.map((k) => ({
+    k,
+    v: data[k], // replacer.call(data, k, data[k]),
+    path: path.concat(k),
+  }));
 
   const active = entries.filter((e) => e.v !== undefined);
 
@@ -98,21 +96,21 @@ export function serialize(
 
   const indent = ' '.repeat((depth + 1) * pad);
   for (let i = 0; i < active.length; i++) {
-    const { k: key, v: val, path: propPath } = active[i];
+    let { k, v, path } = active[i];
 
-    // Emit comments before this property
-    _getComment(comments, propPath)?.forEach((c: string) => lines.push(`${indent}${COMMENT_PREFIX} ${c}`));
+    if (v instanceof Value) {
+      v.comments.forEach((c: string) => lines.push(`${indent}${COMMENT_PREFIX} ${c}`));
+      v = v.value;
+    }
 
     // Emit the property key
-    const keyLine = `${indent}"${key}": `;
+    const keyLine = `${indent}"${k}": `;
     lines.push(keyLine);
 
-    // Serialize the value — for primitives, inline on the same line
-    const isObj = val !== null && typeof val === 'object';
-    if (!isObj) {
-      appendLast(lines, _stringify(val, replacer as any, pad));
+    if (_isObject(v)) {
+      serialize(v, pad, replacer, depth + 1, path, lines);
     } else {
-      serialize(comments, val, pad, replacer, depth + 1, propPath, lines);
+      appendLast(lines, _stringify(v, replacer as any, pad));
     }
 
     // * trailing comma for array elements
