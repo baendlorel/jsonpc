@@ -1,10 +1,10 @@
-import { aggregate, mark, visit } from './core/initializers.js';
+import { aggregate, mark } from './core/initializers.js';
 import { _isArray, _keys, _notComment, _split, _stripPrefix } from './core/common.js';
 import { _set, _delete, _get, _has } from './core/path-map.js';
 
-import { arrayOpers, SupportedArrayMethods } from './core/array.js';
 import { stripTrailingCommas } from './walkers/trailing-comma.js';
 import { serialize } from './core/serializer.js';
+import { Value } from './core/value.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
   (globalThis as any).COMMENT_PREFIX = '//';
@@ -87,20 +87,31 @@ export class JSONPC {
    */
   set(propPath: string | string[], entry: Partial<Entry>): this {
     const k = _split(propPath);
-    const old = _get(this.data, k);
-    if ('value' in entry) {
-      _set(this.data, k, entry.value);
-    }
+    let old = _get(this.data, k);
 
-    if (!('comments' in entry)) {
+    const comments = entry.comments;
+    if ('comments' in entry) {
+      if (!_isArray(comments)) {
+        throw new TypeError(`Invalid comments, must be string[].`);
+      }
+      if (!(old instanceof Value)) {
+        old = new Value(comments, '', old); // & origin is useless during setting stage.
+        _set(this.data, k, old);
+      }
+      if ('value' in entry) {
+        old.value = entry.value;
+        _set(this.data, k, old);
+      }
       return this;
     }
-    const comments = entry.comments;
-    if (!_isArray(comments)) {
-      throw new TypeError(`Invalid comments, must be string[].`);
-    }
-    if (!_has(this.data, k)) {
-      throw new TypeError(`Cannot set comments for a non-exist property path "${propPath}".`);
+
+    if ('value' in entry) {
+      if (old instanceof Value) {
+        old.value = entry.value;
+      } else {
+        _set(this.data, k, entry.value);
+      }
+      return this;
     }
 
     return this;
@@ -113,29 +124,7 @@ export class JSONPC {
   get(propPath: string | string[]): Entry | undefined {
     const k = _split(propPath);
     const v = _get(this.data, k);
-    // TODO 是否完全舍弃这种写法，新增一个叫Entry的类，对于有comments的，就用Entry来表示。Entry则是一个class，对于get、set都会特殊判定
-    return v === undefined ? undefined : { value: v, comments: _get(this.data, k) };
-  }
-
-  /**
-   * Update an array property by calling a supported array method.
-   * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
-   * @param method Supported array method like `"push"`, `"pop"`, etc.
-   * @param args Arguments to pass to the array method
-   * @returns The instance itself for chaining
-   */
-  updateArray<Fn extends SupportedArrayMethods>(
-    propPath: string | string[],
-    method: Fn,
-    args: Parameters<Array<any>[Fn]>,
-  ): this {
-    const k = _split(propPath);
-    const arr = _get(this.data, k);
-    if (!_isArray(arr)) {
-      throw new TypeError(`The property path "${propPath}" is not an array.`);
-    }
-    arrayOpers[method](arr, args as any, this.comments, k);
-    return this;
+    return v === undefined ? undefined : v instanceof Value ? v : { value: v, comments: [] };
   }
 
   /**
@@ -146,10 +135,7 @@ export class JSONPC {
    * @param replacer Like the replacer in `JSON.stringify`, default is `undefined`.
    * @param space default is 2.
    */
-  stringify(
-    replacer?: ((this: any, key: string, value: any) => any) | (number | string)[] | null,
-    space?: number,
-  ): string {
+  stringify(replacer?: ((this: any, key: string, value: any) => any) | (number | string)[], space?: number): string {
     const top = this.top.map((v) => `${COMMENT_PREFIX} ${v}`);
     const lines = serialize(this.comments, this.data, space ?? 2, replacer ?? null);
     const bottom = this.bottom.map((v) => `${COMMENT_PREFIX} ${v}`);
@@ -170,11 +156,9 @@ export class JSONPC {
    * Release the references, clear internal containers.
    */
   destroy() {
-    this.comments.clear();
     this.top = null as any;
     this.bottom = null as any;
     this.data = null as any;
-    this.comments = null as any;
   }
 }
 
