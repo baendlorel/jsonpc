@@ -184,8 +184,8 @@ describe('parse complex JSON', () => {
 {
   // User records with mixed data types
   "users": [
-    // Administrator account
     {
+      // Administrator account
       "id": 1,
       "username": "admin",
       "roles": ["admin", "superuser"],
@@ -195,8 +195,8 @@ describe('parse complex JSON', () => {
         "loginCount": 150,
       },
     },
-    // Regular user account
     {
+      // Regular user account
       "id": 2,
       "username": "john_doe",
       "roles": ["user"],
@@ -206,8 +206,8 @@ describe('parse complex JSON', () => {
         "loginCount": 45,
       },
     },
-    // Suspended account
     {
+      // Suspended account
       "id": 3,
       "username": "jane_smith",
       "roles": ["user"],
