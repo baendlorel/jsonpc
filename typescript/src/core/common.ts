@@ -17,3 +17,5 @@ export const _split = (path: string | string[]): string[] => {
 };
 
 export const _stripPrefix = (t: string) => t.replace(COMMENT_PREFIX, '').trimStart();
+
+export const _isObject = (obj: any): boolean => (typeof obj === 'object' && obj !== null) || typeof obj === 'function';

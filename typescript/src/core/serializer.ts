@@ -1,5 +1,5 @@
 import { _isArray, _keys, _stringify } from './common.js';
-import { _get, _getComment, type CommentMap } from './path-map.js';
+import { _get, type UnameMap } from './path-map.js';
 
 // Collect entries with their values resolved through replacer
 interface Entry {
@@ -16,7 +16,7 @@ const isArrayStart = (lines: string[]) => lines.length === 0 || lines[lines.leng
  * @param path current property path (string[]) for comment lookup
  */
 export function serialize(
-  comments: CommentMap,
+  comments: UnameMap,
   obj: any,
   pad: number,
   replacer: ((this: any, key: string, value: any) => any) | (number | string)[] | null,

@@ -1,3 +1,5 @@
+import { _isObject } from './common.js';
+
 export const _set = (obj: any, path: string[], value: any): void => {
   let current = obj;
   for (let i = 0; i < path.length - 1; i++) {
@@ -13,12 +15,23 @@ export const _set = (obj: any, path: string[], value: any): void => {
 export const _get = (obj: any, path: string[]): any => {
   let current = obj;
   for (const key of path) {
-    if (!(key in current)) {
+    if (!_isObject(current) || !(key in current)) {
       return undefined;
     }
     current = current[key];
   }
   return current;
+};
+
+export const _has = (obj: any, path: string[]): boolean => {
+  let current = obj;
+  for (const key of path) {
+    if (!_isObject(current) || !(key in current)) {
+      return false;
+    }
+    current = current[key];
+  }
+  return true;
 };
 
 export const _delete = (obj: any, path: string[]): void => {
@@ -48,17 +61,3 @@ export const _exchange = (obj: any, path1: any[], path2: any[]) => {
   _set(obj, path1, value2);
   _set(obj, path2, value1);
 };
-
-export type CommentMap = Map<string, string[]>;
-
-/**
- * Use Unit Separator, `U+001F` to join path segments into a single string key for comment storage.
- */
-export const _setComment = (map: CommentMap, path: string[], comments: string[]) =>
-  map.set(path.join('\x1F'), comments);
-
-/**
- * Split a comment key back into its original path segments.
- */
-export const _getComment = (map: CommentMap, path: string[]): string[] | undefined => map.get(path.join('\x1F'));
-export const _deleteComment = (map: CommentMap, path: string[]) => map.delete(path.join('\x1F'));

@@ -1,6 +1,7 @@
-import { aggregate, mark, visit } from './core/initializers.js';
-import { _isArray, _notComment, _split, _stripPrefix } from './core/common.js';
-import { _set, _delete, _get, CommentMap } from './core/path-map.js';
+import type { UnameMap } from './core/uname.js';
+import { aggregate, mark } from './core/initializers.js';
+import { _isArray, _keys, _notComment, _split, _stripPrefix } from './core/common.js';
+import { _set, _delete, _get, _has } from './core/path-map.js';
 
 import { arrayOpers, SupportedArrayMethods } from './core/array.js';
 import { stripTrailingCommas } from './walkers/trailing-comma.js';
@@ -31,7 +32,7 @@ export class JSONPC {
   /**
    * Map a property path to a comment string array.
    */
-  private comments: CommentMap = new Map<string, string[]>();
+  private unames: UnameMap;
   private data: any;
 
   /**
@@ -59,11 +60,22 @@ export class JSONPC {
       this.top = lines0.splice(0, start).map(_stripPrefix);
     }
 
-    const { lines, unames } = mark(aggregate(lines0));
-    this.data = reviver ? JSON.parse(lines.join(''), reviver) : JSON.parse(lines.join(''));
-    console.log(this.data);
-    // TODO visit会去掉data的uname字段，现在改造，要保留它
-    this.comments = visit(this.data, unames);
+    const { t, u } = mark(aggregate(lines0));
+    this.data = reviver ? JSON.parse(t, reviver) : JSON.parse(t);
+    this.unames = u;
+    console.log('unames', this.unames);
+  }
+
+  /**
+   * ! Must assure this.data[path.slice(0, path.length - 1))] exists, otherwise will throw error.
+   */
+  private findUname(path: string[]): string | undefined {
+    const origin = path[path.length - 1];
+    const uname = this.unames.reverse.get(origin);
+    if (!uname) {
+      return undefined;
+    }
+    return _keys(_get(this.data, path.slice(0, path.length - 1))).find((k) => uname.has(k));
   }
 
   /**
@@ -79,15 +91,31 @@ export class JSONPC {
       _set(this.data, k, entry.value);
     }
 
+    if (!('comments' in entry)) {
+      return this;
+    }
     const comments = entry.comments;
-    if (comments) {
-      if (!_isArray(comments)) {
-        throw new TypeError(`Invalid comments, must be string[].`);
-      }
+    if (!_isArray(comments)) {
+      throw new TypeError(`Invalid comments, must be string[].`);
+    }
+    if (!_has(this.data, k)) {
+      throw new TypeError(`Cannot set comments for a non-exist property path "${propPath}".`);
+    }
+
+    // Set the new comments
+    const key = this.findUname(k);
+    if (key) {
+      k[k.length - 1] = key;
       if (comments.length === 0) {
-        _delete(this.comments, k);
+        _delete(this.data, k);
       } else {
-        _set(this.comments, k, comments);
+        _set(this.data, k, comments);
+      }
+    } else {
+      const newUname = this.unames.add(k[k.length - 1]);
+      if (comments.length > 0) {
+        k[k.length - 1] = newUname;
+        _set(this.data, k, comments);
       }
     }
     return this;
@@ -100,7 +128,8 @@ export class JSONPC {
   get(propPath: string | string[]): Entry | undefined {
     const k = _split(propPath);
     const v = _get(this.data, k);
-    return v === undefined ? undefined : { value: v, comments: _get(this.comments, k) };
+    // TODO 是否完全舍弃这种写法，新增一个叫Entry的类，对于有comments的，就用Entry来表示。Entry则是一个class，对于get、set都会特殊判定
+    return v === undefined ? undefined : { value: v, comments: _get(this.data, k) };
   }
 
   /**
