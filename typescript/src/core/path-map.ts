@@ -1,26 +1,40 @@
 import { _isObject } from './common.js';
+import { Value } from './value.js';
 
+const _extractValue = (o: unknown) => (o instanceof Value ? o.value : o);
+
+/**
+ * Won't extract the last fetch
+ */
 export const _set = (obj: any, path: string[], value: any): void => {
   let current = obj;
-  for (let i = 0; i < path.length - 1; i++) {
+  const last = path.length - 1;
+  for (let i = 0; i < last; i++) {
     const key = path[i];
     if (!(key in current)) {
       current[key] = {};
     }
-    current = current[key];
+    current = _extractValue(current[key]);
   }
-  current[path[path.length - 1]] = value;
+  current[path[last]] = value;
 };
 
+/**
+ * Because standard JSON cannot have `undefined`, so `undefined` means the property does not exist.
+ *
+ * Won't extract the last fetch
+ */
 export const _get = (obj: any, path: string[]): any => {
   let current = obj;
-  for (const key of path) {
+  const last = path.length - 1;
+  for (let i = 0; i < last; i++) {
+    const key = path[i];
     if (!_isObject(current) || !(key in current)) {
       return undefined;
     }
-    current = current[key];
+    current = _extractValue(current[key]);
   }
-  return current;
+  return current[path[last]];
 };
 
 export const _has = (obj: any, path: string[]): boolean => {
@@ -29,7 +43,7 @@ export const _has = (obj: any, path: string[]): boolean => {
     if (!_isObject(current) || !(key in current)) {
       return false;
     }
-    current = current[key];
+    current = _extractValue(current[key]);
   }
   return true;
 };
@@ -42,7 +56,7 @@ export const _delete = (obj: any, path: string[]): void => {
     if (!(key in current)) {
       return;
     }
-    current = current[key];
+    current = _extractValue(current[key]);
   }
 
   if (current) {

@@ -56,18 +56,24 @@ export class JSONPC {
     }
 
     const { t, u } = mark(aggregate(lines0));
-    // TODO 由于字符属性是按照从左到右顺序，因此这里一定是先解析到uname属性，下一个紧接着就是属性本身
+    let skip = false;
     this.data = JSON.parse(t, function (this: any, key: string, value: any) {
-      const v = u.get(key);
+      if (skip) {
+        skip = false;
+        return value;
+      }
+
       const raw = reviver.call(this, key, value);
-      if (v) {
-        v.value = raw;
-        return v;
-      } else {
+      const v = u.get(key);
+      if (!v) {
         return raw;
       }
+
+      v.value = raw;
+      this[v.origin] = v;
+      skip = true;
+      return undefined;
     });
-    visit(this.data, u);
     u.clear(); // clear to free memory as it's no longer needed.
     console.log('data', this.data);
   }
@@ -81,6 +87,7 @@ export class JSONPC {
    */
   set(propPath: string | string[], entry: Partial<Entry>): this {
     const k = _split(propPath);
+    const old = _get(this.data, k);
     if ('value' in entry) {
       _set(this.data, k, entry.value);
     }
@@ -96,22 +103,6 @@ export class JSONPC {
       throw new TypeError(`Cannot set comments for a non-exist property path "${propPath}".`);
     }
 
-    // Set the new comments
-    const key = this.findUname(k);
-    if (key) {
-      k[k.length - 1] = key;
-      if (comments.length === 0) {
-        _delete(this.data, k);
-      } else {
-        _set(this.data, k, comments);
-      }
-    } else {
-      const newUname = this.unames.add(k[k.length - 1]);
-      if (comments.length > 0) {
-        k[k.length - 1] = newUname;
-        _set(this.data, k, comments);
-      }
-    }
     return this;
   }
 

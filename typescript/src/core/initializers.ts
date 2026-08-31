@@ -41,43 +41,9 @@ export function mark(aggregated: Array<string | string[]>) {
 
     const uname = genUname();
     const vi = new Value(valueOrComments, interpretName(aggregated[i + 1] as string));
-
     u.set(uname, vi);
-
     return `"${uname}":"",`;
   });
 
   return { t: lines.join(''), u };
 }
-
-// TODO 这里用else可以减少字母数量
-export const visit = (data: any, unames: UnameKeyMap) => {
-  if (typeof data !== 'object' || data === null) {
-    return;
-  }
-
-  if (_isArray(data)) {
-    for (let i = 0; i < data.length; i++) {
-      visit(data[i], unames);
-    }
-    return;
-  }
-
-  const visited = new Set<string>();
-  for (const key in data) {
-    if (visited.has(key)) {
-      continue;
-    }
-
-    const v = unames.get(key);
-    if (v) {
-      v.value = data[v.origin];
-      data[v.origin] = v; // Use symbol to identify the commented property
-      visited.add(v.origin);
-      delete data[key];
-      visit(v.value, unames);
-    } else {
-      visit(data[key], unames);
-    }
-  }
-};
