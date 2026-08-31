@@ -2,7 +2,6 @@ import { _isArray, _keys, _notComment, _stringify, _stripPrefix } from './common
 import { _set, _get, _delete } from './path-map.js';
 import { genUname } from './uname.js';
 
-import { interpretName } from '../walkers/interpret-name.js';
 import { UnameKeyMap, Value } from './value.js';
 
 /**
@@ -40,8 +39,7 @@ export function mark(aggregated: Array<string | string[]>) {
     }
 
     const uname = genUname();
-    const vi = new Value(valueOrComments, interpretName(aggregated[i + 1] as string));
-    u.set(uname, vi);
+    u.set(uname, new Value(valueOrComments));
     return `"${uname}":"",`;
   });
 

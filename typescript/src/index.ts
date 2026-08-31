@@ -94,7 +94,7 @@ export class JSONPC {
         throw new TypeError(`Invalid comments, must be string[].`);
       }
       if (!(old instanceof Value)) {
-        old = new Value(comments, '', old); // & origin is useless during setting stage.
+        old = new Value(comments);
         _set(this.data, k, old);
       }
       if ('value' in entry) {
