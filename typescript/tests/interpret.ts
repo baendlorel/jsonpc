@@ -16,4 +16,6 @@ const text = `
 // Bottom comment`;
 
 const jpc = new JSONPC(text);
+jpc.set('ddd', { value: [2], comments: ['Updated comment'] });
 console.log(jpc.toObject());
+console.log(jpc.stringify());

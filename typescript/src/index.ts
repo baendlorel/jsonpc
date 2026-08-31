@@ -1,4 +1,4 @@
-import { aggregate, mark } from './core/initializers.js';
+import { aggregate, interpret } from './core/initializers.js';
 import { _isArray, _keys, _notComment, _parse, _split, _stripPrefix } from './core/common.js';
 import { _set, _delete, _get, _has } from './core/path-map.js';
 
@@ -36,45 +36,26 @@ export class JSONPC {
    * @param reviver A function that transforms the results. This function is called for each member of the object.
    */
   constructor(text: string, reviver: (this: any, key: string, value: any) => any = (_, v) => v) {
-    const lines0 = stripTrailingCommas(text)
+    const lines = stripTrailingCommas(text)
       .split(/(\r\n|\r|\n)/)
       .map((t) => t.trim())
       .filter((v) => v.length > 0);
 
     // # Check if the json is valid.
-    void JSON.parse(lines0.filter(_notComment).join(''));
+    void JSON.parse(lines.filter(_notComment).join(''));
 
     // # Whole file level comments
-    const start = lines0.findIndex(_notComment);
-    const end = lines0.findLastIndex(_notComment);
+    const start = lines.findIndex(_notComment);
+    const end = lines.findLastIndex(_notComment);
     // ! Must be done first, or indexes will change.
-    if (end !== -1 && end < lines0.length - 1) {
-      this.bottom = lines0.splice(end + 1).map(_stripPrefix);
+    if (end !== -1 && end < lines.length - 1) {
+      this.bottom = lines.splice(end + 1).map(_stripPrefix);
     }
     if (start > 0) {
-      this.top = lines0.splice(0, start).map(_stripPrefix);
+      this.top = lines.splice(0, start).map(_stripPrefix);
     }
 
-    const { t, u } = mark(aggregate(lines0));
-    let next = null as Value | null;
-    this.data = JSON.parse(t, function (this: any, key: string, value: any) {
-      if (next !== null) {
-        next.value = value;
-        value = next;
-        next = null;
-        return value;
-      }
-
-      const raw = reviver.call(this, key, value);
-      const v = u.get(key);
-      if (!v) {
-        return raw;
-      }
-      next = v;
-      return undefined;
-    });
-    u.clear(); // clear to free memory as it's no longer needed.
-    console.log('data', this.data);
+    this.data = interpret(aggregate(lines), reviver);
   }
 
   /**
