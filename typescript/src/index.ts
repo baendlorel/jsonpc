@@ -56,10 +56,12 @@ export class JSONPC {
     }
 
     const { t, u } = mark(aggregate(lines0));
-    let skip = false;
+    let next = null as Value | null;
     this.data = JSON.parse(t, function (this: any, key: string, value: any) {
-      if (skip) {
-        skip = false;
+      if (next !== null) {
+        next.value = value;
+        value = next;
+        next = null;
         return value;
       }
 
@@ -68,10 +70,7 @@ export class JSONPC {
       if (!v) {
         return raw;
       }
-
-      v.value = raw;
-      this[v.origin] = v;
-      skip = true;
+      next = v;
       return undefined;
     });
     u.clear(); // clear to free memory as it's no longer needed.
@@ -163,8 +162,9 @@ export class JSONPC {
    *   so this is a simple deep clone.
    */
   toObject<T = any>(): T {
-    // TODO 新写法会导致这里结构不对
-    return structuredClone(this.data) as T;
+    const lines = serialize(this.data, 0, (_, v) => (v instanceof Value ? v.value : v)).filter(_notComment);
+    console.log(lines);
+    return JSON.parse(stripTrailingCommas(lines.join('\n'))) as T;
   }
 
   /**

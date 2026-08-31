@@ -16,3 +16,4 @@ const text = `
 // Bottom comment`;
 
 const jpc = new JSONPC(text);
+console.log(jpc.toObject());
