@@ -1,5 +1,5 @@
-import { _isArray, _keys, _stringify } from './common.js';
-import { _get, type UnameMap } from './path-map.js';
+import { _isArray, _isObject, _keys, _stringify } from './common.js';
+import { _get } from './path-map.js';
 
 // Collect entries with their values resolved through replacer
 interface Entry {
@@ -16,10 +16,9 @@ const isArrayStart = (lines: string[]) => lines.length === 0 || lines[lines.leng
  * @param path current property path (string[]) for comment lookup
  */
 export function serialize(
-  comments: UnameMap,
-  obj: any,
+  data: any,
   pad: number,
-  replacer: ((this: any, key: string, value: any) => any) | (number | string)[] | null,
+  replacer: ((this: any, key: string, value: any) => any) | (number | string)[],
   depth: number = 0,
   path: any[] = [],
   lines: string[] = [],
@@ -27,14 +26,14 @@ export function serialize(
   const prefix = ' '.repeat(depth * pad);
 
   // # Primitive
-  if (obj === null || typeof obj !== 'object') {
-    lines.push(`${prefix}${_stringify(obj, null, pad)}`);
+  if (!_isObject(data)) {
+    lines.push(`${prefix}${_stringify(data, null, pad)}`);
     return lines;
   }
 
   // # Array
-  if (_isArray(obj)) {
-    if (obj.length === 0) {
+  if (_isArray(data)) {
+    if (data.length === 0) {
       appendLast(lines, `[]`);
       return lines;
     }
@@ -48,9 +47,9 @@ export function serialize(
       appendLast(lines, `[`);
     }
 
-    for (let i = 0; i < obj.length; i++) {
-      const val = typeof replacer === 'function' ? replacer.call(obj, String(i), obj[i]) : obj[i];
-      serialize(comments, val, pad, replacer, depth + 1, [...path, i], lines);
+    for (let i = 0; i < data.length; i++) {
+      const subdata = typeof replacer === 'function' ? replacer.call(data, String(i), data[i]) : data[i];
+      serialize(subdata, pad, replacer, depth + 1, [...path, i], lines);
 
       // * trailing comma for array elements
       appendLast(lines, `,`);
@@ -60,14 +59,14 @@ export function serialize(
   }
 
   // # Plain object
-  const keys = _keys(obj);
+  const keys = _keys(data);
   if (keys.length === 0) {
     lines.push(`${prefix}{}`);
     return lines;
   }
 
   const entries: Entry[] = keys.map((k) => {
-    const v = typeof replacer === 'function' ? replacer.call(obj, k, obj[k]) : obj[k];
+    const v = typeof replacer === 'function' ? replacer.call(data, k, data[k]) : data[k];
     return {
       k,
       v,

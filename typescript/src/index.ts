@@ -135,10 +135,24 @@ export class JSONPC {
    * @param replacer Like the replacer in `JSON.stringify`, default is `undefined`.
    * @param space default is 2.
    */
-  stringify(replacer?: ((this: any, key: string, value: any) => any) | (number | string)[], space?: number): string {
+  stringify(
+    replacer: ((this: any, key: string, value: any) => any) | (number | string)[] = (_, v) => v,
+    space = 2,
+  ): string {
     const top = this.top.map((v) => `${COMMENT_PREFIX} ${v}`);
-    const lines = serialize(this.comments, this.data, space ?? 2, replacer ?? null);
     const bottom = this.bottom.map((v) => `${COMMENT_PREFIX} ${v}`);
+
+    // # Serialize
+    if (_isArray(replacer)) {
+      const keep = new Set(replacer);
+      replacer = (key: string, value: any) => (keep.has(key) ? value : undefined);
+    }
+
+    const actualReplacer = function (this: any, key: string, value: any) {
+      return replacer.call(this, key, value instanceof Value ? value.value : value);
+    };
+
+    const lines = serialize(this.data, space, actualReplacer);
 
     return top.concat(lines, bottom).join('\n');
   }
