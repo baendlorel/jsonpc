@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { aggregate, mark, visit } from '../src/core/initializers.js';
+import { aggregate } from '../src/core/initializers.js';
 import { JSONPC } from '../src/index.js';
-import { interpretName } from '../src/walkers/interpret-name.js';
 import { _get } from '../src/core/path-map.js';
 import { isUname } from './helpers.js';
 
