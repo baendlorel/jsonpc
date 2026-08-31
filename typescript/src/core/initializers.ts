@@ -1,4 +1,4 @@
-import { _isArray, _keys, _notComment, _stringify, _stripPrefix } from './common.js';
+import { _isArray, _keys, _notComment, _stripPrefix } from './common.js';
 import { _set, _get, _delete } from './path-map.js';
 import { genUname } from './uname.js';
 

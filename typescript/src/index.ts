@@ -1,10 +1,10 @@
 import { aggregate, mark } from './core/initializers.js';
-import { _isArray, _keys, _notComment, _split, _stripPrefix } from './core/common.js';
+import { _isArray, _keys, _notComment, _parse, _split, _stripPrefix } from './core/common.js';
 import { _set, _delete, _get, _has } from './core/path-map.js';
 
 import { stripTrailingCommas } from './walkers/trailing-comma.js';
 import { serialize } from './core/serializer.js';
-import { Value } from './core/value.js';
+import { defaultReplacer, Value } from './core/value.js';
 
 if (typeof COMMENT_PREFIX === 'undefined') {
   (globalThis as any).COMMENT_PREFIX = '//';
@@ -123,7 +123,11 @@ export class JSONPC {
   get(propPath: string | string[]): Entry | undefined {
     const k = _split(propPath);
     const v = _get(this.data, k);
-    return v === undefined ? undefined : v instanceof Value ? v : { value: v, comments: [] };
+    return v === undefined
+      ? undefined
+      : v instanceof Value
+        ? { value: v.value, comments: [...v.comments] }
+        : { value: v, comments: [] };
   }
 
   /**
@@ -134,10 +138,7 @@ export class JSONPC {
    * @param replacer Like the replacer in `JSON.stringify`, default is `undefined`.
    * @param space default is 2.
    */
-  stringify(
-    replacer: ((this: any, key: string, value: any) => any) | (number | string)[] = (_, v) => v,
-    space = 2,
-  ): string {
+  stringify(replacer?: ((this: any, key: string, value: any) => any) | (number | string)[], space = 2): string {
     const top = this.top.map((v) => `${COMMENT_PREFIX} ${v}`);
     const bottom = this.bottom.map((v) => `${COMMENT_PREFIX} ${v}`);
 
@@ -146,10 +147,11 @@ export class JSONPC {
       const keep = new Set(replacer);
       replacer = (key: string, value: any) => (keep.has(key) ? value : undefined);
     }
-
-    const actualReplacer = function (this: any, key: string, value: any) {
-      return replacer.call(this, key, value instanceof Value ? value.value : value);
-    };
+    const actualReplacer = replacer
+      ? function (this: any, key: string, value: any) {
+          return replacer.call(this, key, value instanceof Value ? value.value : value);
+        }
+      : defaultReplacer;
 
     const lines = serialize(this.data, space, actualReplacer);
 
@@ -162,9 +164,8 @@ export class JSONPC {
    *   so this is a simple deep clone.
    */
   toObject<T = any>(): T {
-    const lines = serialize(this.data, 0, (_, v) => (v instanceof Value ? v.value : v)).filter(_notComment);
-    console.log(lines);
-    return JSON.parse(stripTrailingCommas(lines.join('\n'))) as T;
+    const lines = serialize(this.data, 0, defaultReplacer).filter(_notComment);
+    return _parse(stripTrailingCommas(lines.join('\n'))) as T;
   }
 
   /**
@@ -185,15 +186,4 @@ export class JSONPC {
  * @param reviver Same as the reviver in `JSON.parse`.
  * @returns an operatable instance.
  */
-export function parse(text: string, reviver?: (this: any, key: string, value: any) => any): JSONPC {
-  return new JSONPC(text, reviver);
-}
-
-export function stringify(
-  jsonpc: JSONPC,
-  replacer?: ((this: any, key: string, value: any) => any) | null,
-  space?: string | number,
-): string;
-export function stringify(jsonpc: JSONPC, ...args: any[]): string {
-  return jsonpc.stringify(...args);
-}
+export const parse = (text: string, reviver?: (this: any, key: string, value: any) => any) => new JSONPC(text, reviver);

@@ -6,3 +6,5 @@ export class Value {
     public value: any = null,
   ) {}
 }
+
+export const defaultReplacer = (_: string, v: any) => (v instanceof Value ? v.value : v);
