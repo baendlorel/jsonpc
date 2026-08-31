@@ -1,6 +1,6 @@
 import { _ascii, _isArray, _keys, _notComment, _stringify, _stripPrefix } from './common.js';
 import { interpretName } from '../walkers/interpret-name.js';
-import { _set, _get, _delete, type CommentMap } from './path-map.js';
+import { _set, _get, _delete, type CommentMap, _setComment, _deleteComment } from './path-map.js';
 
 /**
  * Multiple comment lines will be collapsed into a string array.
@@ -66,20 +66,20 @@ export function visit(o: any, unames: Map<string, string>, path: string[] = [], 
       // Store the comments outside the object.
       delete o[k];
       const nextPath = path.concat(origin);
-      _set(comments, nextPath, v);
+      _setComment(comments, nextPath, v);
       if (typeof v === 'object') {
         visit(v, unames, nextPath, comments);
       }
     } else if (_isArray(v)) {
       const arr: any[] = [];
       const nextPath = path.concat(k);
-      _set(comments, nextPath, arr);
+      _setComment(comments, nextPath, arr);
       for (let i = 0; i < v.length; i++) {
         visit(v[i], unames, nextPath.concat(String(i)), comments);
       }
       // & Prevent empty array from being stored in comments.
       if (arr.length === 0) {
-        _delete(comments, nextPath);
+        _deleteComment(comments, nextPath);
       }
     } else if (typeof v === 'object') {
       visit(v, unames, path.concat(k), comments);

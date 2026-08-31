@@ -61,3 +61,4 @@ export const _setComment = (map: CommentMap, path: string[], comments: string[])
  * Split a comment key back into its original path segments.
  */
 export const _getComment = (map: CommentMap, path: string[]): string[] | undefined => map.get(path.join('\x1F'));
+export const _deleteComment = (map: CommentMap, path: string[]) => map.delete(path.join('\x1F'));
