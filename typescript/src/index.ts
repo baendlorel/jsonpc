@@ -60,10 +60,11 @@ export class JSONPC {
       this.top = lines0.splice(0, start).map(_stripPrefix);
     }
 
-    const { t, u } = mark(aggregate(lines0));
+    const { t, u, v } = mark(aggregate(lines0));
     this.data = reviver ? JSON.parse(t, reviver) : JSON.parse(t);
     this.unames = u;
     console.log('unames', this.unames);
+    console.log('vmap', v);
   }
 
   /**
