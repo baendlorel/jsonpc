@@ -19,6 +19,8 @@ export default defineConfig(() => {
           __IS_DEV__: 'true',
           COMMENT_PREFIX: "'//'",
           '${COMMENT_PREFIX}': '//',
+          SEP: '"\x1f"',
+          '${SEP}': '\x1f',
         },
       }),
     ],

@@ -60,6 +60,8 @@ export class JSONPC {
 
     const { lines, unames } = mark(aggregate(lines0));
     this.data = reviver ? JSON.parse(lines.join(''), reviver) : JSON.parse(lines.join(''));
+    console.log(this.data);
+    // TODO visit会去掉data的uname字段，现在改造，要保留它
     this.comments = visit(this.data, unames);
   }
 

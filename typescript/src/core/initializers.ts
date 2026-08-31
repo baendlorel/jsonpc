@@ -1,6 +1,8 @@
-import { _ascii, _isArray, _keys, _notComment, _stringify, _stripPrefix } from './common.js';
-import { interpretName } from '../walkers/interpret-name.js';
+import { _isArray, _keys, _notComment, _stringify, _stripPrefix } from './common.js';
 import { _set, _get, _delete, type CommentMap, _setComment, _deleteComment } from './path-map.js';
+import { genUname } from './uname.js';
+
+import { interpretName } from '../walkers/interpret-name.js';
 
 /**
  * Multiple comment lines will be collapsed into a string array.
@@ -24,8 +26,6 @@ export function aggregate(lines: string[]): Array<string | string[]> {
   return result;
 }
 
-const r = () => Math.random() * 43 + 48;
-
 /**
  * Marks property with comments into a uniqueName, so that
  * we can associate the right property with right comments.
@@ -41,7 +41,7 @@ export function mark(aggregated: Array<string | string[]>) {
     }
 
     const origin = interpretName(aggregated[i + 1] as string);
-    const uname = _ascii(r(), r(), r(), r(), r(), r(), r());
+    const uname = genUname(origin);
     unames.set(uname, origin);
     return `"${uname}":${_stringify(v)},`;
   });
