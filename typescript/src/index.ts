@@ -37,19 +37,15 @@ export class JSONPC {
    * @param reviver A function that transforms the results. This function is called for each member of the object.
    */
   constructor(text: string, reviver?: (this: any, key: string, value: any) => any) {
-    const lines0 = text
+    const lines0 = stripTrailingCommas(text)
       .split(/(\r\n|\r|\n)/)
       .map((t) => t.trim())
       .filter((v) => v.length > 0);
     const withoutComments = lines0.filter(_notComment);
-    const rawJson = stripTrailingCommas(withoutComments.join(''));
-    try {
-      this.data = reviver ? JSON.parse(rawJson, reviver) : JSON.parse(rawJson);
-    } catch (e) {
-      throw new Error(`Json text being parsed is invalid, ${(e as Error).message}`);
-    }
+    const rawJson = withoutComments.join('');
 
-    // & Now the json is some how valid.
+    // ! Check if the json is valid.
+    void JSON.parse(rawJson);
 
     // Fill the whole file level comments
     const start = lines0.findIndex(_notComment);
@@ -63,7 +59,7 @@ export class JSONPC {
     }
 
     const { lines, unames } = mark(aggregate(lines0));
-    this.data = JSON.parse(lines.join(''));
+    this.data = reviver ? JSON.parse(lines.join(''), reviver) : JSON.parse(lines.join(''));
     this.comments = visit(this.data, unames);
   }
 
