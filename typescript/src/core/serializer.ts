@@ -83,20 +83,13 @@ export function serialize(
   }
 
   /**
-   * This makes:
-   * ```js
-   * {
+   * # This makes:
    *  "ddd": {
    *  }
-   * }
-   * ```
    * instead of:
-   * ```js
-   * {
    *   "ddd":
    *   {
    *   }
-   * }
    */
   if (isArrayStart(lines)) {
     lines.push(`${prefix}{`);
@@ -109,6 +102,7 @@ export function serialize(
     const { k: key, v: val, path: propPath } = active[i];
 
     // Emit comments before this property
+    // FIXME 严重问题！如果说proppath是array，且有comments，那么此时如果proppath[0]也有注释，则reflect-deep的set会覆盖过它吧！
     _get(comments, propPath)?.forEach((c: string) => lines.push(`${indent}${COMMENT_PREFIX} ${c}`));
 
     // Emit the property key
