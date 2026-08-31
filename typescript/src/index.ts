@@ -56,7 +56,26 @@ export class JSONPC {
     }
 
     const { t, u } = mark(aggregate(lines0));
-    this.data = reviver ? JSON.parse(t, reviver) : JSON.parse(t);
+    this.data = reviver
+      ? JSON.parse(t, function (this: any, key: string, value: any) {
+          const v = u.get(key);
+          const raw = reviver.call(this, key, value);
+          if (v) {
+            v.value = raw;
+            return v;
+          } else {
+            return raw;
+          }
+        })
+      : JSON.parse(t, function (this: any, key: string, value: any) {
+          const v = u.get(key);
+          if (v) {
+            v.value = value;
+            return v;
+          } else {
+            return value;
+          }
+        });
     visit(this.data, u);
     u.clear(); // clear to free memory as it's no longer needed.
     console.log('data', this.data);
