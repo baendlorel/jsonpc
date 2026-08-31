@@ -35,19 +35,18 @@ export function aggregate(lines: string[]): Array<string | string[]> {
 export function mark(aggregated: Array<string | string[]>) {
   const umap: UnameKeyMap = new Map();
   const vmap: ValueMap = new Map();
-  const lines = aggregated.map((v, i) => {
-    if (typeof v === 'string') {
-      return v; // Return if it's a normal line
+  const lines = aggregated.map((valueOrComments, i) => {
+    if (typeof valueOrComments === 'string') {
+      return valueOrComments; // Return if it's a normal line
     }
 
-    const o = interpretName(aggregated[i + 1] as string);
-    const uname = genUname(o);
-    const vi = new Value(v, o);
+    const uname = genUname();
+    const vi = new Value(valueOrComments, interpretName(aggregated[i + 1] as string));
 
     umap.set(uname, vi);
     vmap.set(vi.sym, vi);
 
-    return `"${uname}":${_stringify(v)},`;
+    return `"${uname}":"",`;
   });
 
   return { t: lines.join(''), u: umap, v: vmap };
@@ -65,11 +64,21 @@ export const visit = (data: any, unames: UnameKeyMap) => {
     return;
   }
 
+  const visited = new Set<string>();
   for (const key in data) {
-    const vi = unames.get(key);
-    if (vi) {
-      data[key] = vi.sym;
+    if (visited.has(key)) {
+      continue;
     }
-    visit(data[key], unames);
+
+    const v = unames.get(key);
+    if (v) {
+      v.value = data[v.origin];
+      data[v.origin] = v.sym; // Use symbol to identify the commented property
+      visited.add(v.origin);
+      delete data[key];
+      visit(v.value, unames);
+    } else {
+      visit(data[key], unames);
+    }
   }
 };

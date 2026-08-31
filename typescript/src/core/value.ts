@@ -3,9 +3,9 @@ export type UnameKeyMap = Map<string, Value>;
 
 export class Value {
   constructor(
-    public value: any,
+    public comments: string[],
     public origin: string,
+    public value: any = null,
     public sym = Symbol(),
-    public comments: string[] = [],
   ) {}
 }

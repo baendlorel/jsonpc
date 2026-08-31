@@ -1,7 +1,7 @@
-import type { UnameMap } from './core/uname.js';
-import { aggregate, mark } from './core/initializers.js';
+import { aggregate, mark, visit } from './core/initializers.js';
 import { _isArray, _keys, _notComment, _split, _stripPrefix } from './core/common.js';
 import { _set, _delete, _get, _has } from './core/path-map.js';
+import type { UnameMap, ValueMap } from './core/value.js';
 
 import { arrayOpers, SupportedArrayMethods } from './core/array.js';
 import { stripTrailingCommas } from './walkers/trailing-comma.js';
@@ -29,10 +29,7 @@ export class JSONPC {
    */
   public bottom: string[] = [];
 
-  /**
-   * Map a property path to a comment string array.
-   */
-  private unames: UnameMap;
+  private vmap: ValueMap;
   private data: any;
 
   /**
@@ -62,9 +59,11 @@ export class JSONPC {
 
     const { t, u, v } = mark(aggregate(lines0));
     this.data = reviver ? JSON.parse(t, reviver) : JSON.parse(t);
-    this.unames = u;
-    console.log('unames', this.unames);
+    this.vmap = v;
+    visit(this.data, u);
+    u.clear(); // clear to free memory as it's no longer needed.
     console.log('vmap', v);
+    console.log('data', this.data);
   }
 
   /**
