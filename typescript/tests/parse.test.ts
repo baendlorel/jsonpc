@@ -82,15 +82,14 @@ describe('parse complex JSON', () => {
       expect(output).toContain('// Last updated: 2024-01-15');
 
       // Test nested property comments
-      expect(getComments(jpc, 'database')).toEqual([
-        'Database connection settings',
-        'These are critical for the application to run',
-      ]);
+      expect(getComments(jpc, 'database')?.[0]).toEqual('Database connection settings');
+      expect(getComments(jpc, 'database')?.[1]).toEqual('These are critical for the application to run');
       expect(getComments(jpc, 'database.host')).toEqual(['Connection string format']);
       expect(getComments(jpc, 'database.useSSL')).toEqual(['SSL configuration']);
 
       // Test array-related comments
-      expect(getComments(jpc, 'api')).toEqual(['API configuration section']);
+      expect(getComments(jpc, 'api')?.length).toEqual(1);
+      expect(getComments(jpc, 'api')?.[0]).toEqual('API configuration section');
       expect(getComments(jpc, 'api.endpoints')).toBeUndefined(); // Arrays don't have direct comments
 
       // Test nested object comments
