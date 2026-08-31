@@ -1,5 +1,5 @@
-import replace from '@rollup/plugin-replace';
 import { defineConfig } from 'vitest/config';
+import { replacePlugin } from './tsdown.config.js';
 
 export default defineConfig(() => {
   return {
@@ -11,18 +11,6 @@ export default defineConfig(() => {
     resolve: {
       alias: {},
     },
-    plugins: [
-      (replace as unknown as typeof replace.default)({
-        preventAssignment: true,
-        delimiter: ['', ''],
-        values: {
-          __IS_DEV__: 'true',
-          COMMENT_PREFIX: "'//'",
-          '${COMMENT_PREFIX}': '//',
-          SEP: '"\x1f"',
-          '${SEP}': '\x1f',
-        },
-      }),
-    ],
+    plugins: [replacePlugin()],
   };
 });

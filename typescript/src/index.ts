@@ -9,6 +9,9 @@ import { serialize } from './core/serializer.js';
 if (typeof COMMENT_PREFIX === 'undefined') {
   (globalThis as any).COMMENT_PREFIX = '//';
 }
+if (typeof SEP === 'undefined') {
+  (globalThis as any).SEP = '\uE000';
+}
 
 interface Entry {
   value: any;
@@ -41,13 +44,11 @@ export class JSONPC {
       .split(/(\r\n|\r|\n)/)
       .map((t) => t.trim())
       .filter((v) => v.length > 0);
-    const withoutComments = lines0.filter(_notComment);
-    const rawJson = withoutComments.join('');
 
-    // ! Check if the json is valid.
-    void JSON.parse(rawJson);
+    // # Check if the json is valid.
+    void JSON.parse(lines0.filter(_notComment).join(''));
 
-    // Fill the whole file level comments
+    // # Whole file level comments
     const start = lines0.findIndex(_notComment);
     const end = lines0.findLastIndex(_notComment);
     // ! Must be done first, or indexes will change.

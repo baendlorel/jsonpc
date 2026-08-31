@@ -3,7 +3,7 @@
  */
 declare const COMMENT_PREFIX: string;
 /**
- * `\x1f`
+ * Separator for unique name
  */
 declare const SEP: string;
 

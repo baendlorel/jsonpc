@@ -4,6 +4,19 @@ import replace from '@rollup/plugin-replace';
 
 const isDev = process.env.NODE_ENV === 'development';
 
+export const replacePlugin = () =>
+  (replace as unknown as typeof replace.default)({
+    preventAssignment: true,
+    delimiter: ['', ''],
+    values: {
+      __IS_DEV__: isDev ? 'true' : 'false',
+      COMMENT_PREFIX: "'//'",
+      '${COMMENT_PREFIX}': '//',
+      SEP: '"\uE000"',
+      '${SEP}': '\uE000',
+    },
+  });
+
 export default defineConfig({
   cwd: import.meta.dirname,
   entry: [join(import.meta.dirname, 'src', 'index.ts')],
@@ -14,19 +27,7 @@ export default defineConfig({
   minify: true,
   target: 'node16',
   treeshake: true,
-  plugins: [
-    (replace as unknown as typeof replace.default)({
-      preventAssignment: true,
-      delimiter: ['', ''],
-      values: {
-        __IS_DEV__: isDev ? 'true' : 'false',
-        COMMENT_PREFIX: "'//'",
-        '${COMMENT_PREFIX}': '//',
-        SEP: '"\x1f"',
-        '${SEP}': '\x1f',
-      },
-    }),
-  ],
+  plugins: [replacePlugin()],
   deps: {
     alwaysBundle: ['reflect-deep'],
   },
