@@ -3,7 +3,7 @@ import { _set, _get, _delete } from './path-map.js';
 import { genUname } from './uname.js';
 
 import { interpretName } from '../walkers/interpret-name.js';
-import { UnameKeyMap, Value, ValueMap } from './value.js';
+import { UnameKeyMap, Value } from './value.js';
 
 /**
  * Multiple comment lines will be collapsed into a string array.
@@ -33,8 +33,7 @@ export function aggregate(lines: string[]): Array<string | string[]> {
  * @param aggregated muiltiple comments are collapsed into `string[]`.
  */
 export function mark(aggregated: Array<string | string[]>) {
-  const umap: UnameKeyMap = new Map();
-  const vmap: ValueMap = new Map();
+  const u: UnameKeyMap = new Map();
   const lines = aggregated.map((valueOrComments, i) => {
     if (typeof valueOrComments === 'string') {
       return valueOrComments; // Return if it's a normal line
@@ -43,15 +42,15 @@ export function mark(aggregated: Array<string | string[]>) {
     const uname = genUname();
     const vi = new Value(valueOrComments, interpretName(aggregated[i + 1] as string));
 
-    umap.set(uname, vi);
-    vmap.set(vi.sym, vi);
+    u.set(uname, vi);
 
     return `"${uname}":"",`;
   });
 
-  return { t: lines.join(''), u: umap, v: vmap };
+  return { t: lines.join(''), u };
 }
 
+// TODO 这里用else可以减少字母数量
 export const visit = (data: any, unames: UnameKeyMap) => {
   if (typeof data !== 'object' || data === null) {
     return;
@@ -73,7 +72,7 @@ export const visit = (data: any, unames: UnameKeyMap) => {
     const v = unames.get(key);
     if (v) {
       v.value = data[v.origin];
-      data[v.origin] = v.sym; // Use symbol to identify the commented property
+      data[v.origin] = v; // Use symbol to identify the commented property
       visited.add(v.origin);
       delete data[key];
       visit(v.value, unames);

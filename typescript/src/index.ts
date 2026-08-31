@@ -1,7 +1,6 @@
 import { aggregate, mark, visit } from './core/initializers.js';
 import { _isArray, _keys, _notComment, _split, _stripPrefix } from './core/common.js';
 import { _set, _delete, _get, _has } from './core/path-map.js';
-import type { UnameMap, ValueMap } from './core/value.js';
 
 import { arrayOpers, SupportedArrayMethods } from './core/array.js';
 import { stripTrailingCommas } from './walkers/trailing-comma.js';
@@ -29,7 +28,6 @@ export class JSONPC {
    */
   public bottom: string[] = [];
 
-  private vmap: ValueMap;
   private data: any;
 
   /**
@@ -57,25 +55,11 @@ export class JSONPC {
       this.top = lines0.splice(0, start).map(_stripPrefix);
     }
 
-    const { t, u, v } = mark(aggregate(lines0));
+    const { t, u } = mark(aggregate(lines0));
     this.data = reviver ? JSON.parse(t, reviver) : JSON.parse(t);
-    this.vmap = v;
     visit(this.data, u);
     u.clear(); // clear to free memory as it's no longer needed.
-    console.log('vmap', v);
     console.log('data', this.data);
-  }
-
-  /**
-   * ! Must assure this.data[path.slice(0, path.length - 1))] exists, otherwise will throw error.
-   */
-  private findUname(path: string[]): string | undefined {
-    const origin = path[path.length - 1];
-    const uname = this.unames.reverse.get(origin);
-    if (!uname) {
-      return undefined;
-    }
-    return _keys(_get(this.data, path.slice(0, path.length - 1))).find((k) => uname.has(k));
   }
 
   /**

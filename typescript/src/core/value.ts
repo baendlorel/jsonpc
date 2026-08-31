@@ -1,4 +1,3 @@
-export type ValueMap = Map<symbol, Value>;
 export type UnameKeyMap = Map<string, Value>;
 
 export class Value {
@@ -6,6 +5,5 @@ export class Value {
     public comments: string[],
     public origin: string,
     public value: any = null,
-    public sym = Symbol(),
   ) {}
 }
