@@ -35,7 +35,7 @@ export class JSONPC {
    * @param text json text
    * @param reviver A function that transforms the results. This function is called for each member of the object.
    */
-  constructor(text: string, reviver?: (this: any, key: string, value: any) => any) {
+  constructor(text: string, reviver: (this: any, key: string, value: any) => any = (_, v) => v) {
     const lines0 = stripTrailingCommas(text)
       .split(/(\r\n|\r|\n)/)
       .map((t) => t.trim())
@@ -56,26 +56,17 @@ export class JSONPC {
     }
 
     const { t, u } = mark(aggregate(lines0));
-    this.data = reviver
-      ? JSON.parse(t, function (this: any, key: string, value: any) {
-          const v = u.get(key);
-          const raw = reviver.call(this, key, value);
-          if (v) {
-            v.value = raw;
-            return v;
-          } else {
-            return raw;
-          }
-        })
-      : JSON.parse(t, function (this: any, key: string, value: any) {
-          const v = u.get(key);
-          if (v) {
-            v.value = value;
-            return v;
-          } else {
-            return value;
-          }
-        });
+    // TODO 由于字符属性是按照从左到右顺序，因此这里一定是先解析到uname属性，下一个紧接着就是属性本身
+    this.data = JSON.parse(t, function (this: any, key: string, value: any) {
+      const v = u.get(key);
+      const raw = reviver.call(this, key, value);
+      if (v) {
+        v.value = raw;
+        return v;
+      } else {
+        return raw;
+      }
+    });
     visit(this.data, u);
     u.clear(); // clear to free memory as it's no longer needed.
     console.log('data', this.data);
