@@ -1,6 +1,6 @@
 import { _ascii, _isArray, _keys, _notComment, _stringify, _stripPrefix } from './common.js';
 import { interpretName } from '../walkers/interpret-name.js';
-import { _set, _get, _delete } from './path-map.js';
+import { _set, _get, _delete, type CommentMap } from './path-map.js';
 
 /**
  * Multiple comment lines will be collapsed into a string array.
@@ -56,7 +56,7 @@ export function mark(aggregated: Array<string | string[]>) {
  * @param path property name path
  * @param comments returned map
  */
-export function visit(o: any, unames: Map<string, string>, path: string[] = [], comments: any = {}) {
+export function visit(o: any, unames: Map<string, string>, path: string[] = [], comments: CommentMap = new Map()) {
   for (const k in o) {
     const origin = unames.get(k);
     const v = o[k];

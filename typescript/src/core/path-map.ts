@@ -48,3 +48,16 @@ export const _exchange = (obj: any, path1: any[], path2: any[]) => {
   _set(obj, path1, value2);
   _set(obj, path2, value1);
 };
+
+export type CommentMap = Map<string, string[]>;
+
+/**
+ * Use Unit Separator, `U+001F` to join path segments into a single string key for comment storage.
+ */
+export const _setComment = (map: CommentMap, path: string[], comments: string[]) =>
+  map.set(path.join('\x1F'), comments);
+
+/**
+ * Split a comment key back into its original path segments.
+ */
+export const _getComment = (map: CommentMap, path: string[]): string[] | undefined => map.get(path.join('\x1F'));

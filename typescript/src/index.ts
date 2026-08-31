@@ -1,6 +1,6 @@
 import { aggregate, mark, visit } from './core/initializers.js';
 import { _isArray, _notComment, _split, _stripPrefix } from './core/common.js';
-import { _set, _delete, _get } from './core/path-map.js';
+import { _set, _delete, _get, CommentMap } from './core/path-map.js';
 
 import { arrayOpers, SupportedArrayMethods } from './core/array.js';
 import { stripTrailingCommas } from './walkers/trailing-comma.js';
@@ -28,7 +28,7 @@ export class JSONPC {
   /**
    * Map a property path to a comment string array.
    */
-  private comments: any;
+  private comments: CommentMap = new Map<string, string[]>();
   private data: any;
 
   /**

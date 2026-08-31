@@ -1,5 +1,5 @@
 import { _isArray, _keys, _stringify } from './common.js';
-import { _get } from './path-map.js';
+import { _get, _getComment, type CommentMap } from './path-map.js';
 
 // Collect entries with their values resolved through replacer
 interface Entry {
@@ -16,7 +16,7 @@ const isArrayStart = (lines: string[]) => lines.length === 0 || lines[lines.leng
  * @param path current property path (string[]) for comment lookup
  */
 export function serialize(
-  comments: any,
+  comments: CommentMap,
   obj: any,
   pad: number,
   replacer: ((this: any, key: string, value: any) => any) | (number | string)[] | null,
@@ -102,8 +102,7 @@ export function serialize(
     const { k: key, v: val, path: propPath } = active[i];
 
     // Emit comments before this property
-    // FIXME 严重问题！如果说proppath是array，且有comments，那么此时如果proppath[0]也有注释，则reflect-deep的set会覆盖过它吧！
-    _get(comments, propPath)?.forEach((c: string) => lines.push(`${indent}${COMMENT_PREFIX} ${c}`));
+    _getComment(comments, propPath)?.forEach((c: string) => lines.push(`${indent}${COMMENT_PREFIX} ${c}`));
 
     // Emit the property key
     const keyLine = `${indent}"${key}": `;
