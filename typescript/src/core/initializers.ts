@@ -3,7 +3,7 @@ import { _isArray, _keys, _notComment, _stripPrefix } from './common.js';
 import { _set, _get, _delete } from './path-map.js';
 import { genUname } from './uname.js';
 
-import { UnameKeyMap, Value } from './value.js';
+import { type UnameKeyMap, Value } from './value.js';
 
 /**
  * Multiple comment lines will be collapsed into a string array.

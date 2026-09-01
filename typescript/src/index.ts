@@ -1,5 +1,5 @@
 import { aggregate, interpret } from './core/initializers.js';
-import { _isArray, _keys, _notComment, _parse, _split, _stripPrefix } from './core/common.js';
+import { _addPrefix, _isArray, _keys, _notComment, _parse, _split, _stripPrefix } from './core/common.js';
 import { _set, _delete, _get, _has } from './core/path-map.js';
 
 import { stripTrailingCommas } from './walkers/trailing-comma.js';
@@ -101,6 +101,7 @@ export class JSONPC {
   /**
    * Get entry for a property path.
    * @param propPath like `"a.b.c.0.1"`, will be resolved by `.split('.')`
+   * @returns A copy of the entry, or `undefined` if not found.
    */
   get(propPath: string | string[]): Entry | undefined {
     const k = _split(propPath);
@@ -121,8 +122,8 @@ export class JSONPC {
    * @param space default is 2.
    */
   stringify(replacer?: ((this: any, key: string, value: any) => any) | (number | string)[] | null, space = 2): string {
-    const top = this.top.map((v) => `${COMMENT_PREFIX} ${v}`);
-    const bottom = this.bottom.map((v) => `${COMMENT_PREFIX} ${v}`);
+    const top = this.top.map(_addPrefix);
+    const bottom = this.bottom.map(_addPrefix);
 
     // # Serialize
     if (_isArray(replacer)) {
