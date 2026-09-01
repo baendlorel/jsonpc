@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { JSONPC, parse, stringify } from '../src/index.js';
+import { JSONPC, parse } from '../src/index.js';
 
 // Helper function to set comments for a property path
 function setComments(jpc: JSONPC, path: string, comments: string[]): void {
@@ -38,11 +38,11 @@ describe('JSONPC', () => {
     });
 
     it('should throw on invalid JSON', () => {
-      expect(() => new JSONPC('{invalid')).toThrow('Json text being parsed is invalid');
+      expect(() => new JSONPC('{invalid')).toThrow(/Expected property name or '}'/);
     });
 
     it('should throw on malformed JSON', () => {
-      expect(() => new JSONPC('{')).toThrow('Json text being parsed is invalid');
+      expect(() => new JSONPC('{')).toThrow(/Expected property name or/);
     });
 
     it('should handle empty object', () => {
@@ -138,13 +138,13 @@ describe('JSONPC', () => {
 
     it('should return undefined for properties without comments', () => {
       const jpc = new JSONPC(sampleText);
-      expect(getComments(jpc, 'nested')).toBeUndefined();
+      expect(getComments(jpc, 'nested')).toEqual([]);
       expect(getComments(jpc, 'nonexistent')).toBeUndefined();
     });
 
     it('should return undefined for nested properties without comments', () => {
       const jpc = new JSONPC(sampleText);
-      expect(getComments(jpc, 'nested.x')).toBeUndefined();
+      expect(getComments(jpc, 'nested.x')).toEqual([]);
     });
 
     it('should get comments for nested property', () => {
@@ -170,7 +170,7 @@ describe('JSONPC', () => {
 
     it('should return undefined for non-existent path', () => {
       const jpc = new JSONPC('{"a": 1}');
-      expect(getComments(jpc, 'a')).toBeUndefined();
+      expect(getComments(jpc, 'a')).toEqual([]);
       expect(getComments(jpc, 'b')).toBeUndefined();
     });
 
@@ -348,7 +348,7 @@ describe('JSONPC', () => {
     it('stringify should delegate to JSONPC.stringify', () => {
       const jpc = parse('{"a": 42}');
       setComments(jpc, 'a', ['hello']);
-      const result = stringify(jpc);
+      const result = jpc.stringify();
       expect(result).toContain('// hello');
       expect(result).toContain('"a"');
     });

@@ -120,7 +120,7 @@ export class JSONPC {
    * @param replacer Like the replacer in `JSON.stringify`, default is `undefined`.
    * @param space default is 2.
    */
-  stringify(replacer?: ((this: any, key: string, value: any) => any) | (number | string)[], space = 2): string {
+  stringify(replacer?: ((this: any, key: string, value: any) => any) | (number | string)[] | null, space = 2): string {
     const top = this.top.map((v) => `${COMMENT_PREFIX} ${v}`);
     const bottom = this.bottom.map((v) => `${COMMENT_PREFIX} ${v}`);
 

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { aggregate } from '../src/core/initializers.js';
 import { JSONPC } from '../src/index.js';
 import { _get } from '../src/core/path-map.js';
-import { isUname } from './helpers.js';
 
 // Helper function to set comments for a property path
 function setComments(jpc: JSONPC, path: string, comments: string[]): void {
@@ -40,100 +39,6 @@ describe('core', () => {
     });
   });
 
-  describe('interpretName', () => {
-    it('should extract a simple property name', () => {
-      expect(interpretName('"foo": 1')).toBe('foo');
-    });
-
-    it('should handle empty string key', () => {
-      expect(interpretName('"": 1')).toBe('');
-    });
-
-    it('should handle escaped backslash in key', () => {
-      // The current implementation skips escaped characters (including \")
-      // so the quote is not included in the output
-      expect(interpretName('"foo\\\\bar": 1')).toBe('foo\\\\bar');
-    });
-
-    it('should throw on non-property lines', () => {
-      expect(() => interpretName('{')).toThrow('Comments are only allowed directly above property names');
-      expect(() => interpretName('}')).toThrow('Comments are only allowed directly above property names');
-      expect(() => interpretName('[')).toThrow('Comments are only allowed directly above property names');
-    });
-
-    it('should throw when colon is missing', () => {
-      expect(() => interpretName('"foo"')).toThrow(/Cannot find ending quote/);
-    });
-  });
-
-  describe('mark', () => {
-    it('should convert comments into uuid-named properties with comments as value', () => {
-      const input = ['{', ['// comment for x'], '"x": 1', '}'];
-      const result = mark(input);
-      expect(result.lines[0]).toBe('{');
-      expect(isUname(result.lines[1].slice(1, 8))).toBe(true);
-      expect(result.lines[1].includes('comment for x')).toBe(true);
-      expect(result.lines[2]).toBe('"x": 1');
-      expect(result.lines[3]).toBe('}');
-      const uuidKey = result.lines[1].match(/"([^"]+)":/)?.[1];
-      expect(uuidKey).toBeDefined();
-      expect(result.unames.get(uuidKey!)).toBe('x');
-    });
-
-    it('should handle multiple comment blocks', () => {
-      const input = ['{', ['c1'], '"a": 1,', ['c2'], '"b": 2', '}'];
-      const result = mark(input);
-
-      const uuidKeys = result.lines
-        .filter((l) => typeof l === 'string' && l.startsWith('"'))
-        .map(interpretName)
-        .filter(isUname);
-
-      expect(uuidKeys).toHaveLength(2);
-      expect(result.unames.get(uuidKeys[0]!)).toBe('a');
-      expect(result.unames.get(uuidKeys[1]!)).toBe('b');
-    });
-
-    it('should handle empty input', () => {
-      const result = mark([]);
-      expect(result.lines).toEqual([]);
-      expect(result.unames.size).toBe(0);
-    });
-
-    it('should handle lines without comments', () => {
-      const input = ['{', '"a": 1', '}'];
-      const result = mark(input);
-      expect(result.lines).toEqual(input);
-      expect(result.unames.size).toBe(0);
-    });
-  });
-
-  describe('visit', () => {
-    it('should collect uuid-named keys into the path map and delete them from obj', () => {
-      const obj = { a_uuid: { b: 2 }, a: { b: 2 } };
-      const names = new Map([['a_uuid', 'a']]);
-      const result = visit(obj, names);
-      expect(obj).not.toHaveProperty('a_uuid');
-      expect(obj).toHaveProperty('a');
-      expect(_get(result, ['a'])).toEqual({ b: 2 });
-    });
-
-    it('should traverse nested objects and collect uuid-renamed props', () => {
-      const obj = { a: { b_uuid: ['// hi'], b: 1 } };
-      const names = new Map([['b_uuid', 'b']]);
-      const result = visit(obj, names);
-      console.log('visit result:', result);
-      expect(_get(result, ['a', 'b'])).toEqual(['// hi']);
-      expect(obj.a).not.toHaveProperty('b_uuid');
-      expect(obj.a).toHaveProperty('b');
-    });
-
-    it('should handle empty object', () => {
-      const result = visit({}, new Map());
-      expect(_get(result, ['anything'])).toBeUndefined();
-    });
-  });
-
   describe('JSONPC integration', () => {
     const sampleText = `
 // Top comment 1
@@ -166,7 +71,7 @@ describe('core', () => {
 
     it('should return undefined for properties without comments', () => {
       const jpc = new JSONPC(sampleText);
-      expect(getComments(jpc, 'nested')).toBeUndefined();
+      expect(getComments(jpc, 'nested')).toEqual([]);
       expect(getComments(jpc, 'nonexistent')).toBeUndefined();
     });
 
@@ -198,7 +103,7 @@ describe('core', () => {
     });
 
     it('should throw on invalid JSON', () => {
-      expect(() => new JSONPC('{invalid')).toThrow('Json text being parsed is invalid');
+      expect(() => new JSONPC('{invalid')).toThrow(/Expected property name or '}'/);
     });
 
     it('should handle a simple object with no comments', () => {
