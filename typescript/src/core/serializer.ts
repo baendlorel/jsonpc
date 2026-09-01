@@ -2,13 +2,6 @@ import { _isArray, _isObject, _keys, _stringify } from './common.js';
 import { _get } from './path-map.js';
 import { Value } from './value.js';
 
-// Collect entries with their values resolved through replacer
-interface Entry {
-  k: string;
-  v: any;
-  path: string[];
-}
-
 const appendLast = (lines: string[], s: string) => (lines[lines.length - 1] += s);
 const isArrayStart = (lines: string[]) => lines.length === 0 || lines[lines.length - 1].endsWith('[');
 
@@ -66,11 +59,17 @@ export function serialize(
     return lines;
   }
 
-  const entries: Entry[] = keys.map((k) => ({
-    k,
-    v: data[k], // replacer.call(data, k, data[k]),
-    path: path.concat(k),
-  }));
+  // find
+  const entries = keys.map((k) => {
+    const r = data[k];
+
+    return {
+      k,
+      v: replacer.call(data, k, r instanceof Value ? r.value : r),
+      c: r instanceof Value ? r.comments : null,
+      p: path.concat(k),
+    };
+  });
 
   const active = entries.filter((e) => e.v !== undefined);
 
@@ -96,11 +95,10 @@ export function serialize(
 
   const indent = ' '.repeat((depth + 1) * pad);
   for (let i = 0; i < active.length; i++) {
-    let { k, v, path } = active[i];
+    let { k, v, c, p } = active[i];
 
-    if (v instanceof Value) {
-      v.comments.forEach((c: string) => lines.push(`${indent}${COMMENT_PREFIX} ${c}`));
-      v = v.value;
+    if (c) {
+      c.forEach((c: string) => lines.push(`${indent}${COMMENT_PREFIX} ${c}`));
     }
 
     // Emit the property key
@@ -108,7 +106,7 @@ export function serialize(
     lines.push(keyLine);
 
     if (_isObject(v)) {
-      serialize(v, pad, replacer, depth + 1, path, lines);
+      serialize(v, pad, replacer, depth + 1, p, lines);
     } else {
       appendLast(lines, _stringify(v, replacer as any, pad));
     }
