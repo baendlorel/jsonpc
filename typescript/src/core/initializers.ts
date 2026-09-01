@@ -41,24 +41,23 @@ export function interpret(aggregated: Array<string | string[]>, reviver: (this: 
       }
 
       const uname = genUname();
-      u.set(uname, new Value(valueOrComments, interpretName(aggregated[i + 1] as string)));
-      return `"${uname}":"",`;
+      const origin = interpretName(aggregated[i + 1] as string);
+      u.set(uname, new Value(valueOrComments, origin));
+
+      // & value of the uname key is the original key, make it easier to find the right property when parsing.
+      return `"${uname}":"${origin}",`;
     })
     .join('\n');
 
-  console.log('aggregated text version', t);
-
-  console.log(u);
-
-  // FIXME  问题在于，注释下一个如果是对象，那么不会先解析这个对象的key，而是钻进对象里面，去解析子对象的第一个key。
-
-  const stack: Array<{ o: any; v: Value }> = [];
+  const stack: Array<{ o: any; k: string; v: Value }> = [];
   const data = JSON.parse(t, function (this: any, key: string, value: any) {
-    u.has(key) && console.log('正在解析', key);
+    if (__IS_DEV__) {
+      u.has(key) && console.log('正在解析', key);
+    }
 
     if (stack.length > 0) {
       const last = stack[stack.length - 1];
-      if (last?.o === this && last.v.origin === key) {
+      if (last?.o === this && last.k === key) {
         stack.pop();
         last.v.value = reviver.call(this, key, value);
         return last.v;
@@ -69,7 +68,9 @@ export function interpret(aggregated: Array<string | string[]>, reviver: (this: 
     if (!v) {
       return reviver.call(this, key, value);
     }
-    stack.push({ o: this, v });
+
+    // & value of the uname key is the original key
+    stack.push({ o: this, k: value, v });
     return undefined;
   });
 

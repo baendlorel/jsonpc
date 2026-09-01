@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { defineConfig } from 'tsdown';
 import replace from '@rollup/plugin-replace';
 
-const isDev = process.env.NODE_ENV === 'development';
+const isDev = process.env.NODE_ENV !== 'production';
 
 export const replacePlugin = () =>
   (replace as unknown as typeof replace.default)({
