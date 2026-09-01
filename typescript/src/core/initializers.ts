@@ -48,16 +48,21 @@ export function interpret(aggregated: Array<string | string[]>, reviver: (this: 
 
   console.log('aggregated text version', t);
 
+  console.log(u);
+
   // FIXME  问题在于，注释下一个如果是对象，那么不会先解析这个对象的key，而是钻进对象里面，去解析子对象的第一个key。
 
   const stack: Array<{ o: any; v: Value }> = [];
   const data = JSON.parse(t, function (this: any, key: string, value: any) {
     u.has(key) && console.log('正在解析', key);
 
-    const last = stack[stack.length - 1];
-    if (last?.o === this && last.v.origin === key) {
-      stack.pop();
-      return last.v.value;
+    if (stack.length > 0) {
+      const last = stack[stack.length - 1];
+      if (last?.o === this && last.v.origin === key) {
+        stack.pop();
+        last.v.value = reviver.call(this, key, value);
+        return last.v;
+      }
     }
 
     const v = u.get(key);
