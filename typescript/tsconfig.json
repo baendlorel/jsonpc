@@ -11,5 +11,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["./src/**/*.ts", "*.ts", "deprecated/array-sort.ts", "deprecated/interpret-name.ts"]
+  "include": ["./src/**/*.ts", "*.ts"]
 }
