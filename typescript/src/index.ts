@@ -74,13 +74,14 @@ export class JSONPC {
       if (!_isArray(comments)) {
         throw new TypeError(`Invalid comments, must be string[].`);
       }
-      if (!(old instanceof Value)) {
+      if (old instanceof Value) {
+        old.comments = comments;
+      } else {
         old = new Value(comments);
         _set(this.data, k, old);
       }
       if ('value' in entry) {
         old.value = entry.value;
-        _set(this.data, k, old);
       }
       return this;
     }
