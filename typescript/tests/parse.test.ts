@@ -80,6 +80,7 @@ describe('parse complex JSON', () => {
       const output = jpc.stringify();
       expect(output).toContain('// Configuration file for application');
       expect(output).toContain('// Last updated: 2024-01-15');
+      console.log(jpc);
 
       // Test nested property comments
       expect(getComments(jpc, 'database')?.[0]).toEqual('Database connection settings');

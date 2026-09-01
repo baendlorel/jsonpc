@@ -43,10 +43,14 @@ export function interpret(aggregated: Array<string | string[]>, reviver: (this: 
       u.set(uname, new Value(valueOrComments));
       return `"${uname}":"",`;
     })
-    .join('');
+    .join('\n');
 
+  console.log('aggregated text version', t);
+
+  // FIXME  问题在于，注释下一个如果是对象，那么不会先解析这个对象的key，而是钻进对象里面，去解析子对象的第一个key。
   let next = null as Value | null;
   const data = JSON.parse(t, function (this: any, key: string, value: any) {
+    console.log('正在解析', key, '存在uname吗', u.has(key));
     if (next) {
       next.value = value;
       value = next;
