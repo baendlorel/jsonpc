@@ -91,7 +91,7 @@ describe('parse complex JSON', () => {
       // Test array-related comments
       expect(getComments(jpc, 'api')?.length).toEqual(1);
       expect(getComments(jpc, 'api')?.[0]).toEqual('API configuration section');
-      expect(getComments(jpc, 'api.endpoints')).toBeUndefined(); // Arrays don't have direct comments
+      expect(getComments(jpc, 'api.endpoints')).toEqual([]); // Arrays don't have direct comments
 
       // Test nested object comments
       expect(getComments(jpc, 'features')).toEqual(['Feature flags']);

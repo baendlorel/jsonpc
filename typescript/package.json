@@ -1,6 +1,6 @@
 {
   "name": "jsonpc-ts",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "author": {
     "name": "Kasukabe Tsumugi",
     "email": "futami16237@gmail.com"
@@ -30,7 +30,7 @@
     "int": "tsx tests/interpret.ts",
     "pub": "tsx ./pub.ts",
     "test": "vitest",
-    "build": "tsdown",
+    "build": "tsdown --env.production",
     "try": "tsx src/index.ts"
   },
   "repository": {

@@ -61,11 +61,12 @@ _Other positions and block comments are not allowed._
 // ✅ Valid: Bottom-level file comment
 ```
 
-### Read and set values and comments
+### Parse and Read Values with Comments
 
 ```ts
 import { parse } from 'jsonpc-ts';
 
+// Parse jsonpc text into an operatable instance
 const jsonpc = parse(text);
 
 // Get both value and comments for a property path
@@ -75,75 +76,113 @@ const entry = jsonpc.get('profile');
 // Get value only
 const name = jsonpc.get('name')?.value;    // → "Alice"
 const age = jsonpc.get('profile.age')?.value; // → 25
-const age = jsonpc.get(['profile','age'])?.value; // → 25
+const age2 = jsonpc.get(['profile','age'])?.value; // → 25
 
 // Get comments only
 const comments = jsonpc.get('name')?.comments;
-// → ['This is a name comment']
-
-// Set value only
-jsonpc.set('profile.age', { value: 26 });
-
-// Set comments only
-jsonpc.set('name', { comments: ['Updated name comment'] });
-
-// Set both value and comments
-jsonpc.set('profile', {
-  value: { age: 26 },
-  comments: ['Updated profile comment']
-});
+// → ['// This is a name comment']
 
 // Handle non-existent paths
 const entry = jsonpc.get('nonexistent');
 // → undefined
 ```
 
-### Array operations
+### Set Values and Comments
 
 ```ts
-// All common array methods supported, comments automatically maintained
-jsonpc.updateArray('items', 'push', [4]);           // Add element
-jsonpc.updateArray('items', 'pop', []);             // Remove last
-jsonpc.updateArray('items', 'shift', []);           // Remove first
-jsonpc.updateArray('items', 'unshift', [0]);        // Add to beginning
-jsonpc.updateArray('items', 'splice', [1, 2, 5, 6]); // Replace elements
-jsonpc.updateArray('items', 'sort', [(a, b) => a - b]); // Sort
-jsonpc.updateArray('items', 'reverse', []);         // Reverse
+import { parse } from 'jsonpc-ts';
+
+const jsonpc = parse(text);
+
+// Set value only
+jsonpc.set('profile.age', { value: 26 });
+
+// Set comments only
+jsonpc.set('name', { comments: ['// Updated name comment'] });
+
+// Set both value and comments
+jsonpc.set('profile', {
+  value: { age: 26 },
+  comments: ['// Updated profile comment']
+});
+
+// Remove comments by setting empty array
+jsonpc.set('name', { comments: [] });
 ```
 
-### Top and Bottom Comments
+### Top and Bottom File Comments
 
 ```ts
+import { parse } from 'jsonpc-ts';
+
+const jsonpc = parse(text);
+
 // Get top-level file comments
 const topComments = jsonpc.top;
-
+// → ['// This is a top comment', '// Another top comment']
 
 // Get bottom-level file comments  
 const bottomComments = jsonpc.bottom;
+// → ['// This is a bottom comment']
 
 // Set top-level comments
-jsonpc.top = ['New top comment'];
+jsonpc.top = ['// New top comment'];
 
 // Set bottom-level comments
-jsonpc.bottom = ['New bottom comment'];
+jsonpc.bottom = ['// New bottom comment'];
 ```
 
 ### Serialization
 
 ```ts
+import { parse } from 'jsonpc-ts';
+
+const jsonpc = parse(text);
+
 // Serialize back to JSON text with comments
 const output = jsonpc.stringify();
 
 // Custom indentation and replacer
 const custom = jsonpc.stringify(null, 4);
 
-// Or use the standalone stringify function
-const output = stringify(jsonpc);
-
 // Get clean JSON object without comments
 const clean = jsonpc.toObject();
+// → { name: "Alice", profile: { age: 25 }, items: [1, 2] }
 ```
 
+### Cleanup
+
+```ts
+// Release internal references and clear internal containers
+jsonpc.destroy();
+```
+
+### Using with JSON.parse reviver
+
+```ts
+import { parse } from 'jsonpc-ts';
+
+// Parse with custom reviver function
+const jsonpc = parse(text, (key, value) => {
+  // Transform values during parsing
+  if (key === 'date' && typeof value === 'string') {
+    return new Date(value);
+  }
+  return value;
+});
+```
+
+## API Reference
+
+### `parse(text, reviver?)`
+
+Factory function to create a `JSONPC` instance.
+
+**Parameters:**
+- `text` (string): Raw JSON text with property comments
+- `reviver` (function, optional): Same as the reviver in `JSON.parse`
+
+**Returns:** `JSONPC` instance
 
 ### `class JSONPC`
 
@@ -156,16 +195,48 @@ const clean = jsonpc.toObject();
 
 #### Methods
 
-| Method                                                       | Description                                   |
-| ------------------------------------------------------------ | --------------------------------------------- |
-| `get(path: string \| string[]): Entry \| undefined`          | Get entry with value and comments             |
-| `set(path: string \| string[], entry: Partial<Entry>): this` | Set value and/or comments                     |
-| `updateArray(path, method, args): this`                      | Execute array operations                      |
-| `stringify(replacer?, space?): string`                       | Serialize to JSON text with comments          |
-| `toObject<T>(): T`                                           | Return a pure JavaScript object (no comments) |
-| `destroy(): void`                                            | Clean up internal references                  |
+##### `get(propPath): Entry | undefined`
 
-#### Type Definitions
+Get entry with value and comments for a property path.
+
+**Parameters:**
+- `propPath` (string | string[]): Property path (e.g., `"profile.age"` or `["profile", "age"]`)
+
+**Returns:** `Entry | undefined` - Entry containing value and comments, or undefined if path doesn't exist
+
+##### `set(propPath, entry): this`
+
+Set value and/or comments for a property path.
+
+**Parameters:**
+- `propPath` (string | string[]): Property path to modify
+- `entry` (Partial<Entry>): Object with optional `value` and/or `comments` properties
+
+**Returns:** `this` - Returns the JSONPC instance for chaining
+
+**Note:** Set `entry.comments` to `[]` to remove comments from a property.
+
+##### `stringify(replacer?, space?): string`
+
+Serialize the data back to JSON text with comments.
+
+**Parameters:**
+- `replacer` (function | array | null, optional): Same as the replacer in `JSON.stringify`
+- `space` (number | string, optional): Default is 2 - Indentation spacing
+
+**Returns:** `string` - JSON text with comments
+
+##### `toObject<T>(): T`
+
+Return a pure JavaScript object without any comment artifacts.
+
+**Returns:** `T` - Clean JavaScript object
+
+##### `destroy(): void`
+
+Release internal references and clear internal containers.
+
+### Type Definitions
 
 ```typescript
 interface Entry {
@@ -174,31 +245,19 @@ interface Entry {
 }
 ```
 
-#### Property Path Format
+### Property Path Format
 
-Use dot-separated path strings or string arrays:
+Use dot-separated path strings or string arrays to access nested properties:
 
 ```ts
 "objectName"          // Top-level property
 "nested.prop"         // Nested property
-"items.0"             // Array element
+"items.0"             // Array element by index
 "users.1.name"        // Object property in nested array
 
-// Or use array syntax
-['users', 1, 'name']  // Same as above
+// Or use array syntax (equivalent to above)
+['users', 1, 'name']  // Same as "users.1.name"
 ```
-
-#### Supported Array Methods
-
-The `updateArray` method supports these array operations:
-
-- `push` — Add elements to the end
-- `pop` — Remove the last element
-- `shift` — Remove the first element
-- `unshift` — Add elements to the beginning
-- `splice` — Insert/delete/replace elements
-- `sort` — Sort the array
-- `reverse` — Reverse the array
 
 ## Comparison with Alternatives
 
@@ -208,7 +267,10 @@ The `updateArray` method supports these array operations:
 | json5      | ✅            | ✅                          | ✅              | Large  |
 | JSONC      | ✅            | ✅                          | ❌              | Medium |
 
-jsonpc trades some flexibility for simplicity and performance.
+jsonpc trades some flexibility for simplicity and performance by:
+- Only allowing comments at specific, predictable positions (above properties)
+- Using standard JSON parsing with comment pre-processing
+- Maintaining a lightweight codebase
 
 ## License
 
