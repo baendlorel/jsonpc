@@ -30,11 +30,12 @@ describe('Error positions', () => {
     expect(() => new JSONPC(text)).toThrow(/Block comment is not allowed/);
   });
 
+  // TEST 这里甚至影响了trailing commas的处理，因此很难精准定位到正确的报错信息
   it('Cannot have trailing comments', () => {
     const text = `{
       "key": "value",
       // ❌ Invalid: Comment not above a property
     }`;
-    expect(() => new JSONPC(text)).toThrow(/xxx/);
+    expect(() => new JSONPC(text)).toThrow(/Expected double-quoted property name in JSON/);
   });
 });
