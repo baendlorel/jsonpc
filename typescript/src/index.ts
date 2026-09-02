@@ -2,6 +2,7 @@ import { aggregate, interpret } from './core/initializers.js';
 import { _addPrefix, _isArray, _keys, _notComment, _parse, _split, _stripPrefix } from './core/common.js';
 import { _set, _delete, _get, _has } from './core/path-map.js';
 
+import { noBlockComment } from './walkers/no-block-comment.js';
 import { stripTrailingCommas } from './walkers/trailing-comma.js';
 import { serialize } from './core/serializer.js';
 import { defaultReplacer, Value } from './core/value.js';
@@ -42,7 +43,9 @@ export class JSONPC {
       .filter((v) => v.length > 0);
 
     // # Check if the json is valid.
-    void JSON.parse(lines.filter(_notComment).join(''));
+    const noSingleLineCommentText = lines.filter(_notComment).join('');
+    noBlockComment(noSingleLineCommentText);
+    void JSON.parse(noSingleLineCommentText);
 
     // # Whole file level comments
     const start = lines.findIndex(_notComment);

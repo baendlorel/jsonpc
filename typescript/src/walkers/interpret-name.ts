@@ -23,6 +23,8 @@ const interpretNameWalker = createWorker({
           state = WalkState.Found;
           stop();
           return;
+        } else if (c === ',' || c === '}' || c === ']') {
+          throw new Error('Cannot have trailing comments');
         } else if (c.trim() !== '') {
           throw new Error(`Unexpected character after property name: ${t}`);
         }

@@ -27,7 +27,7 @@ describe('Error positions', () => {
       /* ❌ Invalid: Block comments not supported */
       "key": "value",
     }`;
-    expect(() => new JSONPC(text)).toThrow(/Expected property name or/);
+    expect(() => new JSONPC(text)).toThrow(/Block comment is not allowed/);
   });
 
   it('Cannot have trailing comments', () => {
