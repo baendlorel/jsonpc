@@ -1,0 +1,75 @@
+// Data export from legacy system
+// Generated: 2024-01-15T10:30:00Z
+// Export ID: EXP-2024-001
+
+{
+  // User records with mixed data types
+  "users": [
+    {
+      // Administrator account
+      "id": 1,
+      "username": "admin",
+      "roles": ["admin", "superuser"],
+      "active": true,
+      "metadata": {
+        "lastLogin": "2024-01-15T09:00:00Z",
+        "loginCount": 150,
+      },
+    },
+    {
+      // Regular user account
+      "id": 2,
+      "username": "john_doe",
+      "roles": ["user"],
+      "active": true,
+      "metadata": {
+        "lastLogin": "2024-01-14T16:30:00Z",
+        "loginCount": 45,
+      },
+    },
+    {
+      // Suspended account
+      "id": 3,
+      "username": "jane_smith",
+      "roles": ["user"],
+      "active": false,
+      "metadata": {
+        "lastLogin": "2023-12-01T08:15:00Z",
+        "loginCount": 12,
+      },
+    },
+  ],
+
+  // System configuration settings
+  "config": {
+    "version": "2.1.0",
+    "environment": "production",
+    // Rate limiting configuration
+    "rateLimits": {
+      "global": 1000,
+      "perUser": 100,
+      "burst": 20,
+    },
+    // Feature toggles
+    "features": ["authentication", "logging", "caching", "monitoring"],
+  },
+
+  // Statistics and metrics
+  "statistics": {
+    "totalUsers": 1500,
+    "activeUsers": 1200,
+    "suspendedUsers": 300,
+    "systemLoad": 0.75,
+    "uptime": "99.9%",
+  },
+
+  // Empty sections for future expansion
+  "futureFeatures": {
+    "notifications": null,
+    "integrations": [],
+    "betaTesting": {},
+  },
+}
+
+// End of export data
+// Total records: 3 users

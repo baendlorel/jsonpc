@@ -34,6 +34,8 @@ const interpretNameWalker = createWorker({
   },
 });
 
+// EPIC 添加一种允许的情况就是：在对象数组的每一个对象的上方，允许写注释
+// 这种注释的位置是确定的，是：1、在[和{之间，2、在,和{之间，3、在[和[之间，4、非常复杂？在,和[之间
 export function interpretName(text: string) {
   if (text[0] !== '"') {
     throw new Error(`Comments are only allowed directly above property names`);

@@ -1,0 +1,62 @@
+// Configuration file for application
+// This file contains all the settings needed
+// Last updated: 2024-01-15
+
+{
+  // Database connection settings
+  // These are critical for the application to run
+  "database": {
+    // Connection string format
+    "host": "localhost",
+    "port": 5432,
+    // SSL configuration
+    "useSSL": true,
+    "credentials": {
+      "username": "admin",
+      "password": "secret123",
+    },
+  },
+
+  // API configuration section
+  "api": {
+    "endpoints": [
+      {
+        "path": "/api/users",
+        "method": "GET",
+        "rateLimit": 100,
+      },
+      {
+        "path": "/api/auth",
+        "method": "POST",
+        "rateLimit": 50,
+      },
+      {
+        "path": "/api/data",
+        "method": "GET",
+        "rateLimit": 200,
+      },
+    ],
+    "timeout": 30000,
+    "retries": 3,
+  },
+
+  // Feature flags
+  "features": {
+    "enableCache": true,
+    "enableLogs": false,
+    "betaFeatures": {
+      "newUI": true,
+      "advancedSearch": false,
+    },
+  },
+
+  // UI preferences
+  "ui": {
+    "theme": "dark",
+    "language": "en-US",
+    "fontSize": 14,
+  },
+}
+
+// End of configuration file
+// Please review changes before deploying
