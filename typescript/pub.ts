@@ -38,4 +38,7 @@ writeFileSync(
 );
 
 execSync(`pnpm build`, { cwd: import.meta.dirname });
-execSync(`npm publish`, { cwd: import.meta.dirname });
+
+const otpIdx = process.argv.indexOf('--otp');
+const otpArg = otpIdx !== -1 ? ` --otp ${process.argv[otpIdx + 1]}` : '';
+execSync(`npm publish${otpArg}`, { cwd: import.meta.dirname });

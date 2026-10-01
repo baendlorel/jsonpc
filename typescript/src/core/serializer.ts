@@ -3,7 +3,10 @@ import { _get } from './path-map.js';
 import { Value } from './value.js';
 
 const appendLast = (lines: string[], s: string) => (lines[lines.length - 1] += s);
-const isArrayStart = (lines: string[]) => lines.length === 0 || lines[lines.length - 1].endsWith('[');
+const isArrayStart = (lines: string[]) =>
+  lines.length === 0 ||
+  lines[lines.length - 1].endsWith('[') ||
+  lines[lines.length - 1].trimStart().startsWith(COMMENT_PREFIX);
 
 /**
  * Serialize a value, appending lines to `lines`.
@@ -41,8 +44,16 @@ export function serialize(
       appendLast(lines, `[`);
     }
 
+    const elemIndent = ' '.repeat((depth + 1) * pad);
     for (let i = 0; i < data.length; i++) {
-      const subdata = replacer.call(data, String(i), data[i]);
+      const raw = data[i];
+
+      // * output array element comments before the element value
+      if (raw instanceof Value && raw.comments.length > 0) {
+        raw.comments.forEach((c: string) => lines.push(`${elemIndent}${COMMENT_PREFIX} ${c}`));
+      }
+
+      const subdata = replacer.call(data, String(i), raw);
       serialize(subdata, pad, replacer, depth + 1, [...path, i], lines);
 
       // * trailing comma for array elements

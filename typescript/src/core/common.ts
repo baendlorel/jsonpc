@@ -16,7 +16,10 @@ export const _split = (path: string | string[]): string[] => {
   throw new TypeError(`Invalid propPath, must be string | string[].`);
 };
 
-export const _stripPrefix = (t: string) => t.replace(COMMENT_PREFIX, '').trimStart();
+export const _stripPrefix = (t: string) => {
+  const s = t.replace(COMMENT_PREFIX, '');
+  return s.startsWith(' ') ? s.slice(1) : s;
+};
 export const _addPrefix = (v: string) => `${COMMENT_PREFIX} ${v}`;
 
 export const _isObject = (obj: any): boolean => typeof obj === 'object' && obj !== null; // || typeof obj === 'function';

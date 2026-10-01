@@ -382,14 +382,15 @@ describe('JSONPC', () => {
       expect(jpc.get('x')?.value).toBe(42);
     });
 
-    it('should strip all leading whitespace after // prefix', () => {
+    it('should strip exactly one space after // prefix', () => {
       const text = `{
   //  comment with two spaces
   "x": 42
 }`;
       const jpc = new JSONPC(text);
-      // stripPrefix removes `//` then trims, so "  comment with two spaces" -> "comment with two spaces"
-      expect(getComments(jpc, 'x')).toEqual(['comment with two spaces']);
+      // stripPrefix removes `//` then strips exactly one leading space,
+      // so "//  comment with two spaces" -> " comment with two spaces" (one space preserved)
+      expect(getComments(jpc, 'x')).toEqual([' comment with two spaces']);
       expect(jpc.get('x')?.value).toBe(42);
     });
 

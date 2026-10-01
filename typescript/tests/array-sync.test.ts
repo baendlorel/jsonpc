@@ -123,20 +123,20 @@ describe('Array operations with Value-based comments', () => {
   });
 
   describe('stringification limitations with array elements', () => {
-    it('should note that array element comments are not serialized', () => {
+    it('should serialize comments for array elements', () => {
       const jpc = new JSONPC(JSON.stringify({ arr: [] }));
 
       jpc.set('arr', { value: [new Value(['first element'], 1), new Value(['second element'], 2)] });
 
       const output = jpc.stringify();
 
-      // Note: Current implementation does not serialize comments for array elements
-      // Comments are only serialized for object properties
       expect(output).toContain('"arr":');
       expect(output).toContain('1');
       expect(output).toContain('2');
+      expect(output).toContain('// first element');
+      expect(output).toContain('// second element');
 
-      // Array element comments are preserved in memory but not serialized
+      // Comments are still accessible in memory
       expect(getComments(jpc, 'arr.0')).toEqual(['first element']);
       expect(getComments(jpc, 'arr.1')).toEqual(['second element']);
     });
@@ -345,8 +345,9 @@ describe('Array operations with Value-based comments', () => {
       const output = jpc.stringify();
       // Array comment should be serialized
       expect(output).toContain('// this is an array');
-      // Note: Array element comments are not serialized in current implementation
-      // but they are preserved in memory
+      // Array element comments are also serialized
+      expect(output).toContain('// first');
+      expect(output).toContain('// second');
     });
   });
 
