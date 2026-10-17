@@ -68,6 +68,7 @@ export class Walker {
     if (c === 't') return this._literal('true', true);
     if (c === 'f') return this._literal('false', false);
     if (c === 'n') return this._literal('null', null);
+    if (c === 'N') return this._literal('NaN', NaN);
     if (c === '-' || (c >= '0' && c <= '9')) return this._number();
 
     if (c === undefined) {
