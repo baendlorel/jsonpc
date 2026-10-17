@@ -1,4 +1,4 @@
-import { WalkState, WalkerHandlerArgsWithSides, Side, createWorker } from './mini-walker.js';
+import { WalkState, WalkerHandlerArgsWithSides, Side, MiniWalker } from './mini-walker.js';
 
 let lastCommaIndex = -1;
 let chars: (string | null)[] = [];
@@ -10,7 +10,7 @@ const onBrace = ({ side }: WalkerHandlerArgsWithSides) => {
   }
 };
 
-const stripTrailingCommasWalker = createWorker({
+const stripTrailingCommasWalker = new MiniWalker({
   onComma({ i }) {
     state = WalkState.Start;
     lastCommaIndex = i;

@@ -1,9 +1,9 @@
-import { WalkState, createWorker, Side } from './mini-walker.js';
+import { WalkState, MiniWalker, Side } from './mini-walker.js';
 
 let chars: string[] = [];
 let state: WalkState = WalkState.Idle;
 
-const interpretNameWalker = createWorker({
+const interpretNameWalker = new MiniWalker({
   inString: true,
   onInString: ({ c }) => chars.push(c),
   onQuote({ side }) {
