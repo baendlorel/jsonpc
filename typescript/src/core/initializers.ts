@@ -2,7 +2,7 @@ import { interpretName } from '../walkers/interpret-name.js';
 import { MiniWalker } from '../walkers/mini-walker.js';
 import { _isArray, _keys, _notComment, _stripPrefix } from './common.js';
 import { _set, _get, _delete } from './path-map.js';
-import { genUname } from './uname.js';
+import { DT_TAG, genUname, NaN_TAG } from './uname.js';
 
 import { type UnameKeyMap, Value } from './value.js';
 
@@ -50,21 +50,21 @@ export function interpret(aggregated: Array<string | string[]>, reviver: (this: 
     })
     .join('\n');
 
-  const text1 = '一个把NaN、Date都标记好的';
-
   const walker = new MiniWalker({
     text: text0,
     inString: false,
     onValue: ({ i, c, t, s, v }) => {
-      // TODO 如果value是特定值，则需要进行特殊处理，比如替换或标记
       if (v === 'NaN') {
-        walker.replace(s, s + v.length, 'null');
+        walker.replace(s, s + v.length, `"${NaN_TAG}"`);
+      }
+      if (/^[\d]+-[\d]{2}-[\d]{2}T[\d]{2}:[\d]{2}:[\d]{2}.\d{3}Z$/.test(v)) {
+        walker.replace(s, s + v.length, `"${DT_TAG}${v}"`);
       }
     },
   });
 
   const stack: Array<{ o: any; k: string; v: Value }> = [];
-  const data = JSON.parse(text0, function (this: any, key: string, value: any) {
+  const data = JSON.parse(walker.apply(), function (this: any, key: string, value: any) {
     if (__IS_DEV__) {
       u.has(key) && console.log('正在解析', key);
     }
