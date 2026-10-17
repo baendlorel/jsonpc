@@ -34,7 +34,7 @@ export function aggregate(lines: string[]): Array<string | string[]> {
  */
 export function interpret(aggregated: Array<string | string[]>, reviver: (this: any, key: string, value: any) => any) {
   const u: UnameKeyMap = new Map();
-  const t = aggregated
+  const text0 = aggregated
     .map((valueOrComments, i) => {
       if (typeof valueOrComments === 'string') {
         return valueOrComments; // Return if it's a normal line
@@ -49,8 +49,10 @@ export function interpret(aggregated: Array<string | string[]>, reviver: (this: 
     })
     .join('\n');
 
+  const text1 = '一个把NaN、Date都标记好的';
+
   const stack: Array<{ o: any; k: string; v: Value }> = [];
-  const data = JSON.parse(t, function (this: any, key: string, value: any) {
+  const data = JSON.parse(text0, function (this: any, key: string, value: any) {
     if (__IS_DEV__) {
       u.has(key) && console.log('正在解析', key);
     }

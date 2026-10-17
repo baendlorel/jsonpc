@@ -84,16 +84,16 @@ const enum VisitState {
 
 export class MiniWalker {
   private _inString: boolean;
-  private _onComma: WalkerOptions['onComma'];
-  private _onColon: WalkerOptions['onColon'];
-  private _onQuote: WalkerOptions['onQuote'];
-  private _onBrace: WalkerOptions['onBrace'];
-  private _onBracket: WalkerOptions['onBracket'];
-  private _onEscape: WalkerOptions['onEscape'];
-  private _onInString: WalkerOptions['onInString'];
-  private _onOther: WalkerOptions['onOther'];
-  private _afterChar: WalkerOptions['afterChar'];
-  private _onValue: WalkerOptions['onValue'];
+  private onComma: WalkerOptions['onComma'];
+  private onColon: WalkerOptions['onColon'];
+  private onQuote: WalkerOptions['onQuote'];
+  private onBrace: WalkerOptions['onBrace'];
+  private onBracket: WalkerOptions['onBracket'];
+  private onEscape: WalkerOptions['onEscape'];
+  private onInString: WalkerOptions['onInString'];
+  private onOther: WalkerOptions['onOther'];
+  private afterChar: WalkerOptions['afterChar'];
+  private onValue: WalkerOptions['onValue'];
   private _t = '';
 
   constructor({
@@ -110,16 +110,16 @@ export class MiniWalker {
     onValue = _noop,
   }: Partial<WalkerOptions>) {
     this._inString = inString;
-    this._onComma = onComma;
-    this._onColon = onColon;
-    this._onQuote = onQuote;
-    this._onBrace = onBrace;
-    this._onBracket = onBracket;
-    this._onEscape = onEscape;
-    this._onInString = onInString;
-    this._onOther = onOther;
-    this._afterChar = afterChar;
-    this._onValue = onValue;
+    this.onComma = onComma;
+    this.onColon = onColon;
+    this.onQuote = onQuote;
+    this.onBrace = onBrace;
+    this.onBracket = onBracket;
+    this.onEscape = onEscape;
+    this.onInString = onInString;
+    this.onOther = onOther;
+    this.afterChar = afterChar;
+    this.onValue = onValue;
   }
 
   run(start = 0, end = this._t.length): this {
@@ -129,16 +129,7 @@ export class MiniWalker {
     const stop = () => (end = NaN);
 
     // Hoist to locals to avoid repeated property lookups in the hot loop.
-    const onComma = this._onComma;
-    const onColon = this._onColon;
-    const onQuote = this._onQuote;
-    const onBrace = this._onBrace;
-    const onBracket = this._onBracket;
-    const onEscape = this._onEscape;
-    const onInString = this._onInString;
-    const onOther = this._onOther;
-    const afterChar = this._afterChar;
-    const onValue = this._onValue;
+    const { onComma, onColon, onQuote, onBrace, onBracket, onEscape, onInString, onOther, afterChar, onValue } = this;
 
     // Value-tracking state — reset fresh every run().
     // Skip all overhead when onValue was not provided.
