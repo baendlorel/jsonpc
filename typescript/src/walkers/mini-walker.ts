@@ -16,8 +16,19 @@ export const enum Side {
 }
 
 export interface WalkerHandlerArgs {
+  /**
+   * Current character index
+   */
   i: number;
+
+  /**
+   * Current character
+   */
   c: string;
+
+  /**
+   * Full text
+   */
   t: string;
 }
 

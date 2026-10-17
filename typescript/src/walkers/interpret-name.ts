@@ -1,4 +1,4 @@
-import { WalkState, createWorker, Side } from './walker.class.js';
+import { WalkState, createWorker, Side } from './mini-walker.js';
 
 let chars: string[] = [];
 let state: WalkState = WalkState.Idle;

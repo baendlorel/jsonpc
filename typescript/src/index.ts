@@ -18,6 +18,8 @@ interface Entry {
   comments?: string[];
 }
 
+// TODO 尝试增加date、bigint、NaN的支持
+
 export class JSONPC {
   /**
    * Comments at the top of the file.Carefully modify it.
