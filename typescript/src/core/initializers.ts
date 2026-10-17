@@ -1,4 +1,5 @@
 import { interpretName } from '../walkers/interpret-name.js';
+import { MiniWalker } from '../walkers/mini-walker.js';
 import { _isArray, _keys, _notComment, _stripPrefix } from './common.js';
 import { _set, _get, _delete } from './path-map.js';
 import { genUname } from './uname.js';
@@ -50,6 +51,14 @@ export function interpret(aggregated: Array<string | string[]>, reviver: (this: 
     .join('\n');
 
   const text1 = '一个把NaN、Date都标记好的';
+
+  const walker = new MiniWalker({
+    text: text0,
+    inString: false,
+    onValue: ({ i, c, t, v }) => {
+      // TODO 如果value是特定值，则需要进行特殊处理，比如替换或标记
+    },
+  });
 
   const stack: Array<{ o: any; k: string; v: Value }> = [];
   const data = JSON.parse(text0, function (this: any, key: string, value: any) {

@@ -49,6 +49,7 @@ export interface WalkerHandlerArgsWithValue extends WalkerHandlerArgs {
 
 /** Only triggered on chars that are not inside a string. */
 interface WalkerOptions {
+  text: string;
   inString: boolean;
 
   onComma: (args: WalkerHandlerArgs, stop: () => void) => void;
@@ -73,6 +74,19 @@ interface WalkerOptions {
   onValue: (args: WalkerHandlerArgsWithValue, stop: () => void) => void;
 }
 
+const enum Op {
+  Replace,
+  Insert,
+  Delete,
+}
+
+interface Ops {
+  start: number;
+  end: number;
+  text: string;
+  op: Op;
+}
+
 // Internal enum for value-boundary tracking (not exported).
 const enum VisitState {
   Idle = 0, // not tracking any value
@@ -83,7 +97,6 @@ const enum VisitState {
 }
 
 export class MiniWalker {
-  private _inString: boolean;
   private onComma: WalkerOptions['onComma'];
   private onColon: WalkerOptions['onColon'];
   private onQuote: WalkerOptions['onQuote'];
@@ -94,9 +107,13 @@ export class MiniWalker {
   private onOther: WalkerOptions['onOther'];
   private afterChar: WalkerOptions['afterChar'];
   private onValue: WalkerOptions['onValue'];
-  private _t = '';
+
+  private inString: boolean;
+  private text = '';
+  private ops: Ops[] = [];
 
   constructor({
+    text,
     inString = false,
     onComma = _noop,
     onColon = _noop,
@@ -109,7 +126,8 @@ export class MiniWalker {
     afterChar = _noop,
     onValue = _noop,
   }: Partial<WalkerOptions>) {
-    this._inString = inString;
+    this.inString = inString;
+    this.text = text!;
     this.onComma = onComma;
     this.onColon = onColon;
     this.onQuote = onQuote;
@@ -122,9 +140,9 @@ export class MiniWalker {
     this.onValue = onValue;
   }
 
-  run(start = 0, end = this._t.length): this {
-    const t = this._t;
-    let inString = this._inString;
+  run(start = 0, end = this.text.length): this {
+    const t = this.text;
+    let inString = this.inString;
     let escaped = false;
     const stop = () => (end = NaN);
 
@@ -277,9 +295,46 @@ export class MiniWalker {
    * - `inString` resets to `false` unless explicitly provided.
    */
   reset(args: { text?: string; inString?: boolean }): this {
-    if ('text' in args) this._t = args.text!;
-    this._inString = args.inString ?? false;
+    if ('text' in args) this.text = args.text!;
+    this.inString = args.inString ?? false;
+    this.ops = [];
     return this;
+  }
+
+  replace(start: number, end: number, text: string): this {
+    this.ops.push({ start, end, text, op: Op.Replace });
+    return this;
+  }
+
+  insert(start: number, text: string): this {
+    this.ops.push({ start, end: 0, text, op: Op.Insert });
+    return this;
+  }
+
+  delete(start: number, end: number): this {
+    this.ops.push({ start, end, text: '', op: Op.Delete });
+    return this;
+  }
+
+  apply(): string {
+    const ops = [...this.ops].sort((a, b) => a.start - b.start);
+
+    const parts: string[] = [];
+    let cursor = 0;
+
+    for (const { start, end, text, op } of ops) {
+      parts.push(this.text.slice(cursor, start), text);
+
+      if (op !== Op.Insert) {
+        cursor = end;
+      } else {
+        cursor = start;
+      }
+    }
+
+    parts.push(this.text.slice(cursor));
+
+    return parts.join('');
   }
 }
 
