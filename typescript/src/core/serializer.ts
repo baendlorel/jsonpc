@@ -9,6 +9,13 @@ const isArrayStart = (lines: string[]) =>
   lines[lines.length - 1].endsWith('[') ||
   lines[lines.length - 1].trimStart().startsWith(COMMENT_PREFIX);
 
+/** Serialize a primitive value to its JSONPC text representation. */
+function _serializePrimitive(v: any): string {
+  if (typeof v === 'number' && isNaN(v)) return 'NaN';
+  if (v instanceof Date) return v.toISOString();
+  return _stringify(v) ?? 'null';
+}
+
 /**
  * Serialize a value, appending lines to `lines`.
  * @param path current property path (string[]) for comment lookup
@@ -25,7 +32,7 @@ export function serialize(
 
   // # Primitive
   if (!_isObject(data)) {
-    lines.push(`${prefix}${_stringify(data, null, pad)}`);
+    lines.push(`${prefix}${_serializePrimitive(data)}`);
     return lines;
   }
 
@@ -120,7 +127,7 @@ export function serialize(
     if (_isObject(v)) {
       serialize(v, pad, replacer, depth + 1, p, lines);
     } else {
-      appendLast(lines, _stringify(v, replacer as any, pad));
+      appendLast(lines, _serializePrimitive(v));
     }
 
     // * trailing comma for array elements

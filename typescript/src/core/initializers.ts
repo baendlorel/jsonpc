@@ -3,8 +3,15 @@ import { MiniWalker } from '../walkers/mini-walker.js';
 import { _isArray, _keys, _notComment, _stripPrefix } from './common.js';
 import { _set, _get, _delete } from './path-map.js';
 import { DT_TAG, genUname, NaN_TAG } from './uname.js';
-
 import { type UnameKeyMap, Value } from './value.js';
+
+/** Convert tagged strings back to their real JS values after JSON.parse. */
+function _unwrapTag(value: any): any {
+  if (typeof value !== 'string') return value;
+  if (value === NaN_TAG) return NaN;
+  if (value.startsWith(DT_TAG)) return new Date(value.slice(DT_TAG.length));
+  return value;
+}
 
 /**
  * Multiple comment lines will be collapsed into a string array.
@@ -73,14 +80,14 @@ export function interpret(aggregated: Array<string | string[]>, reviver: (this: 
       const last = stack[stack.length - 1];
       if (last?.o === this && last.k === key) {
         stack.pop();
-        last.v.value = reviver.call(this, key, value);
+        last.v.value = reviver.call(this, key, _unwrapTag(value));
         return last.v;
       }
     }
 
     const v = u.get(key);
     if (!v) {
-      return reviver.call(this, key, value);
+      return reviver.call(this, key, _unwrapTag(value));
     }
 
     // & value of the uname key is the original key
