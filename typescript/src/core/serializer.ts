@@ -1,4 +1,5 @@
 import { _isArray, _isObject, _keys, _stringify } from './common.js';
+import { COMMENT_PREFIX } from './uname.js';
 import { _get } from './path-map.js';
 import { Value } from './value.js';
 

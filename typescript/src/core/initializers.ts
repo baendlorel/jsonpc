@@ -55,8 +55,11 @@ export function interpret(aggregated: Array<string | string[]>, reviver: (this: 
   const walker = new MiniWalker({
     text: text0,
     inString: false,
-    onValue: ({ i, c, t, v }) => {
+    onValue: ({ i, c, t, s, v }) => {
       // TODO 如果value是特定值，则需要进行特殊处理，比如替换或标记
+      if (v === 'NaN') {
+        walker.replace(s, s + v.length, 'null');
+      }
     },
   });
 

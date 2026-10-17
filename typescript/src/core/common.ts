@@ -1,3 +1,5 @@
+import { COMMENT_PREFIX } from './uname.js';
+
 export const _isArray = Array.isArray;
 export const _keys = Object.keys;
 export const { stringify: _stringify, parse: _parse } = JSON;

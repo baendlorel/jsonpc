@@ -45,6 +45,11 @@ export interface WalkerHandlerArgsWithValue extends WalkerHandlerArgs {
    * they are part of the outer value's `v`.
    */
   v: string;
+
+  /**
+   * Value start position.
+   */
+  s: number;
 }
 
 /** Only triggered on chars that are not inside a string. */
@@ -176,7 +181,7 @@ export class MiniWalker {
           onQuote({ i, c, t, side: Side.Right }, stop);
           // String value just finished.
           if (trackValues && vs === VisitState.InString) {
-            onValue({ i, c, t, v: t.slice(valueStart, i + 1) }, stop);
+            onValue({ i, c, t, s: valueStart, v: t.slice(valueStart, i + 1) }, stop);
             vs = VisitState.Idle;
           }
         } else {
@@ -195,7 +200,7 @@ export class MiniWalker {
           vs === VisitState.InLiteral &&
           (c === ',' || c === '}' || c === ']' || c === ' ' || c === '\t' || c === '\n' || c === '\r')
         ) {
-          onValue({ i: literalEnd, c: t[literalEnd], t, v: t.slice(valueStart, literalEnd + 1) }, stop);
+          onValue({ i: literalEnd, c: t[literalEnd], s: valueStart, t, v: t.slice(valueStart, literalEnd + 1) }, stop);
           vs = VisitState.Idle;
         }
 
@@ -234,7 +239,7 @@ export class MiniWalker {
             break;
           case '}':
             if (vs === VisitState.InNested && --valueDepth === 0) {
-              onValue({ i, c, t, v: t.slice(valueStart, i + 1) }, stop);
+              onValue({ i, c, t, s: valueStart, v: t.slice(valueStart, i + 1) }, stop);
               vs = VisitState.Idle;
             }
             onBrace({ i, c, t, side: Side.Right }, stop);
@@ -245,7 +250,7 @@ export class MiniWalker {
             break;
           case ']':
             if (vs === VisitState.InNested && --valueDepth === 0) {
-              onValue({ i, c, t, v: t.slice(valueStart, i + 1) }, stop);
+              onValue({ i, c, t, s: valueStart, v: t.slice(valueStart, i + 1) }, stop);
               vs = VisitState.Idle;
             }
             onBracket({ i, c, t, side: Side.Right }, stop);

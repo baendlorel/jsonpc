@@ -6,13 +6,6 @@ import { stripTrailingCommas } from './walkers/trailing-comma.js';
 import { serialize } from './core/serializer.js';
 import { defaultReplacer, Value } from './core/value.js';
 
-if (typeof COMMENT_PREFIX === 'undefined') {
-  (globalThis as any).COMMENT_PREFIX = '//';
-}
-if (typeof SEP === 'undefined') {
-  (globalThis as any).SEP = '\uE000';
-}
-
 interface Entry {
   value: any;
   comments?: string[];
