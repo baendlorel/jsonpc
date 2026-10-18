@@ -7,9 +7,18 @@ import { type UnameKeyMap, Value } from './value.js';
 
 /** Convert tagged strings back to their real JS values after JSON.parse. */
 function _unwrapTag(value: any): any {
-  if (typeof value !== 'string') return value;
-  if (value === NaN_TAG) return NaN;
-  if (value.startsWith(DT_TAG)) return new Date(value.slice(DT_TAG.length));
+  if (typeof value !== 'string') {
+    return value;
+  }
+  if (value === NaN_TAG) {
+    return NaN;
+  }
+  if (value.startsWith(DT_TAG)) {
+    return new Date(value.slice(DT_TAG.length));
+  }
+  if (value.startsWith(BIGINT_TAG)) {
+    return BigInt(value.slice(BIGINT_TAG.length, -1));
+  } // strip trailing 'n'
   return value;
 }
 

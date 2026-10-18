@@ -11,8 +11,15 @@ const isArrayStart = (lines: string[]) =>
 
 /** Serialize a primitive value to its JSONPC text representation. */
 function _serializePrimitive(v: any): string {
-  if (typeof v === 'number' && isNaN(v)) return 'NaN';
-  if (v instanceof Date) return v.toISOString();
+  if (typeof v === 'number' && isNaN(v)) {
+    return 'NaN';
+  }
+  if (v instanceof Date) {
+    return v.toISOString();
+  }
+  if (typeof v === 'bigint') {
+    return String(v) + 'n';
+  }
   return _stringify(v) ?? 'null';
 }
 
