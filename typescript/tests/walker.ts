@@ -12,7 +12,7 @@ const text = `
   "nested": {
     "x": 561
   },
-  "arr":[NaN,false,null,true,2],
+  "arr":[NaN,false,null,true,2,{"a":"asdf"}],
 }
 
 // Bottom comment`;
@@ -20,10 +20,10 @@ const text = `
 const walker = new MiniWalker({
   text,
   onValue: ({ i, c, t, s, v, stop, w }) => {
+    // console.log(v);
+  },
+  onArrayItem: ({ i, c, t, s, v, stop, w }) => {
     console.log(v);
-    if (v === 'NaN') {
-      w.replace(s, s + v.length, '"NAN标记"');
-    }
   },
 }).run();
 
