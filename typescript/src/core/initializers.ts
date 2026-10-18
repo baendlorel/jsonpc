@@ -2,7 +2,7 @@ import { interpretName } from '../walkers/interpret-name.js';
 import { MiniWalker } from '../walkers/mini-walker.js';
 import { _isArray, _keys, _notComment, _stripPrefix } from './common.js';
 import { _set, _get, _delete } from './path-map.js';
-import { DT_TAG, genUname, NaN_TAG } from './uname.js';
+import { BIGINT_TAG, DT_TAG, genUname, NaN_TAG } from './uname.js';
 import { type UnameKeyMap, Value } from './value.js';
 
 /** Convert tagged strings back to their real JS values after JSON.parse. */
@@ -61,12 +61,22 @@ export function interpret(aggregated: Array<string | string[]>, reviver: (this: 
     text: text0,
     inString: false,
     onValue: ({ i, c, t, s, v }) => {
+      // NaN support
       if (v === 'NaN') {
         walker.replace(s, s + v.length, `"${NaN_TAG}"`);
       }
+
+      // ISO Date support
       if (/^[\d]+-[\d]{2}-[\d]{2}T[\d]{2}:[\d]{2}:[\d]{2}.\d{3}Z$/.test(v)) {
         walker.replace(s, s + v.length, `"${DT_TAG}${v}"`);
       }
+
+      // bigint support
+      if (/^\d+n$/.test(v)) {
+        walker.replace(s, s + v.length, `"${BIGINT_TAG}${v}"`);
+      }
+
+      // TODO 到时候恢复它们
     },
   }).run();
 

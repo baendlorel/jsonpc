@@ -7,5 +7,6 @@ const _f = Math.floor;
 const _r = Math.random;
 const r = () => '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz/*-+^&*$#@%!~'[_f(_r() * 75)];
 export const genUname = () => SEP + 'xxxxxxxxx'.replace(/[x]/g, r);
-export const NaN_TAG = SEP + '/xccle*8&';
-export const DT_TAG = SEP + '%Yh*Q+Sol';
+export const NaN_TAG = SEP + '/xccle*8&NaN';
+export const DT_TAG = SEP + '/xccle*8&Date';
+export const BIGINT_TAG = SEP + '/xccle*8&BigInt';
