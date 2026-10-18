@@ -11,7 +11,7 @@ const interpretNameWalker = new MiniWalker({
       state = WalkState.Start;
     }
   },
-  afterChar({ c, t }, stop) {
+  afterChar({ c, t, stop }) {
     switch (state) {
       case WalkState.Idle:
         break;

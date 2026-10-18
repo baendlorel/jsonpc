@@ -10,7 +10,8 @@ const text = `
   "ddd": 23,
   "nested": {
     "x": 561
-  }
+  },
+  "arr":[NaN,false,null,true,2],
 }
 
 // Bottom comment`;

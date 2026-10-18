@@ -23,6 +23,13 @@ export interface WalkerHandlerArgs {
   c: string;
   /** Full text */
   t: string;
+
+  stop: () => void;
+
+  /**
+   * This walker instance.
+   */
+  w: MiniWalker;
 }
 
 export interface WalkerHandlerArgsWithSides extends WalkerHandlerArgs {
@@ -57,26 +64,37 @@ interface WalkerOptions {
   text: string;
   inString: boolean;
 
-  onComma: (args: WalkerHandlerArgs, stop: () => void) => void;
-  onColon: (args: WalkerHandlerArgs, stop: () => void) => void;
-  onQuote: (args: WalkerHandlerArgsWithSides, stop: () => void) => void;
-  onBrace: (args: WalkerHandlerArgsWithSides, stop: () => void) => void;
-  onBracket: (args: WalkerHandlerArgsWithSides, stop: () => void) => void;
+  onComma: (args: WalkerHandlerArgs) => void;
+  onColon: (args: WalkerHandlerArgs) => void;
+  onQuote: (args: WalkerHandlerArgsWithSides) => void;
+  onBrace: (args: WalkerHandlerArgsWithSides) => void;
+  onBracket: (args: WalkerHandlerArgsWithSides) => void;
   /** Triggers when `inString === true` and char is `\` (next char is escaped). */
-  onEscape: (args: WalkerHandlerArgs, stop: () => void) => void;
-  onInString: (args: WalkerHandlerArgs, stop: () => void) => void;
+  onEscape: (args: WalkerHandlerArgs) => void;
+  onInString: (args: WalkerHandlerArgs) => void;
   /** Triggers when char is none of the above. */
-  onOther: (args: WalkerHandlerArgs, stop: () => void) => void;
-  afterChar: (args: WalkerHandlerArgs, stop: () => void) => void;
+  onOther: (args: WalkerHandlerArgs) => void;
+  afterChar: (args: WalkerHandlerArgs) => void;
 
   /**
-   * Fires once for each object-property value (the right-hand side of `:`),
-   * immediately after the full value has been consumed.
+   * Fires for every JSON value at **any depth**:
    *
-   * Values nested deeper (inside an object or array value) do **not** emit
-   * their own `onValue` — they are covered by the outer value's `v`.
+   * - **Scalars** (string / number / bool / null / bare literal like `NaN`):
+   *   fired when the token ends.
+   * - **Object / array** that appears as a value (i.e. is the RHS of `:` or
+   *   an element of an enclosing array): fired when its closing `}`/`]` is
+   *   reached, with `v` containing the full source text including delimiters.
+   *
+   * Both levels fire independently — for `"arr": [NaN, 1]` you get three
+   * calls: `NaN`, `1`, and `[NaN, 1]`.
+   *
+   * A top-level `{…}` or `[…]` that is not itself a property value does
+   * **not** fire; only its contents do.
+   *
+   * `s` / `i` are the start / end positions in the source text, useful for
+   * in-place replacements via {@link MiniWalker.replace}.
    */
-  onValue: (args: WalkerHandlerArgsWithValue, stop: () => void) => void;
+  onValue: (args: WalkerHandlerArgsWithValue) => void;
 }
 
 const enum Op {
@@ -95,10 +113,9 @@ interface Ops {
 // Internal enum for value-boundary tracking (not exported).
 const enum VisitState {
   Idle = 0, // not tracking any value
-  AfterColon = 1, // saw ':', skipping whitespace before value starts
+  AfterColon = 1, // saw ':' or opened '['; skipping whitespace before value starts
   InString = 2, // value is a string ("…")
-  InNested = 3, // value is an object/array; tracking brace/bracket depth
-  InLiteral = 4, // value is a literal (number / bool / null)
+  InLiteral = 3, // value is a literal (number / bool / null / bare token)
 }
 
 export class MiniWalker {
@@ -159,138 +176,179 @@ export class MiniWalker {
     const trackValues = onValue !== (_noop as any);
     let vs = VisitState.Idle;
     let valueStart = -1;
-    let valueDepth = 0;
     let literalEnd = -1;
+    // Each frame = [isArray, fireOnClose, openPos].
+    //   isArray    – true when opened by `[` (comma re-arms AfterColon for next item).
+    //   fireOnClose – true when this `{`/`[` is itself a value (appeared after `:` or
+    //                 as an array item), so onValue fires with the whole text on close.
+    //   openPos    – char position of the opening `{` or `[` (for the v slice).
+    const nestStack: [boolean, boolean, number][] = [];
 
     for (let i = start; i < end; i++) {
       const c = t[i];
 
       if (escaped) {
         escaped = false;
-        onInString({ i, c, t }, stop);
+        onInString({ i, c, t, stop, w: this });
       } else if (c === '\\') {
         if (!inString) {
           throw new Error(`Unexpected escape character at position ${i} outside of a string.`);
         }
         escaped = true;
-        onEscape({ i, c, t }, stop);
-        onInString({ i, c, t }, stop);
+        onEscape({ i, c, t, stop, w: this });
+        onInString({ i, c, t, stop, w: this });
       } else if (inString) {
         if (c === '"') {
           inString = false;
-          onQuote({ i, c, t, side: Side.Right }, stop);
+          onQuote({ i, c, t, side: Side.Right, stop, w: this });
           // String value just finished.
           if (trackValues && vs === VisitState.InString) {
-            onValue({ i, c, t, s: valueStart, v: t.slice(valueStart, i + 1) }, stop);
+            onValue({ i, c, t, s: valueStart, v: t.slice(valueStart, i + 1), stop, w: this });
             vs = VisitState.Idle;
           }
         } else {
-          onInString({ i, c, t }, stop);
+          onInString({ i, c, t, stop, w: this });
         }
       } else if (trackValues) {
         // ── Outside a string, with value tracking ──────────────────────────
-
-        // Save vs before pre-checks so the switch knows whether this char
-        // *opened* InNested (prevVs === AfterColon) or is a deeper delimiter
-        // inside an already-tracked nested value (prevVs === InNested).
-        const prevVs = vs;
+        //
+        // nestStack frame = [isArray, fireOnClose, openPos].
+        // Every `{`/`[` pushes a frame; every `}`/`]` pops one.
+        // isArray=true  → comma re-arms AfterColon for next array item.
+        // fireOnClose   → the bracket is itself a value (after `:` or inside an
+        //                 array), so onValue fires for the WHOLE text on close.
 
         // Pre-check 1 — a literal ends right before its terminating char.
         if (
           vs === VisitState.InLiteral &&
           (c === ',' || c === '}' || c === ']' || c === ' ' || c === '\t' || c === '\n' || c === '\r')
         ) {
-          onValue({ i: literalEnd, c: t[literalEnd], s: valueStart, t, v: t.slice(valueStart, literalEnd + 1) }, stop);
+          onValue({
+            i: literalEnd,
+            c: t[literalEnd],
+            s: valueStart,
+            t,
+            v: t.slice(valueStart, literalEnd + 1),
+            stop,
+            w: this,
+          });
           vs = VisitState.Idle;
         }
 
-        // Pre-check 2 — first non-whitespace char after ':' opens the value.
+        // Pre-check 2 — first non-whitespace char after ':' / '[' opens a value.
+        // `{` and `[` are left for the switch (it inspects vs to set fireOnClose).
+        // Closing chars / ',' reset to Idle to handle empty arrays gracefully.
         if (vs === VisitState.AfterColon && c !== ' ' && c !== '\t' && c !== '\n' && c !== '\r') {
-          valueStart = i;
-          if (c === '"') {
-            vs = VisitState.InString;
-          } else if (c === '{' || c === '[') {
-            vs = VisitState.InNested;
-            valueDepth = 1; // this char itself is depth 1; not counted again below
+          if (c === '{' || c === '[') {
+            // leave vs === AfterColon so the switch can detect fireOnClose
+          } else if (c === ']' || c === '}' || c === ',') {
+            vs = VisitState.Idle;
           } else {
-            vs = VisitState.InLiteral;
-            literalEnd = i;
+            valueStart = i;
+            if (c === '"') {
+              vs = VisitState.InString;
+            } else {
+              vs = VisitState.InLiteral;
+              literalEnd = i;
+            }
           }
         }
 
         switch (c) {
           case ',':
-            onComma({ i, c, t }, stop);
+            onComma({ i, c, t, stop, w: this });
+            // In an array context, comma arms tracking for the next item.
+            if (vs === VisitState.Idle && nestStack.length > 0 && nestStack[nestStack.length - 1][0]) {
+              vs = VisitState.AfterColon;
+            }
             break;
           case ':':
-            onColon({ i, c, t }, stop);
+            onColon({ i, c, t, stop, w: this });
             if (vs === VisitState.Idle) vs = VisitState.AfterColon;
             break;
           case '"':
             inString = true;
-            onQuote({ i, c, t, side: Side.Left }, stop);
+            onQuote({ i, c, t, side: Side.Left, stop, w: this });
             break;
-          case '{':
-            // Increment depth only when we were *already* inside a nested value
-            // (prevVs === InNested).  The opening '{' that started InNested was
-            // handled by Pre-check 2 above (depth already set to 1).
-            if (prevVs === VisitState.InNested) valueDepth++;
-            onBrace({ i, c, t, side: Side.Left }, stop);
+          case '{': {
+            // fireOnClose = true when this { is itself a value (after : or as array item)
+            const fireOnClose = vs === VisitState.AfterColon;
+            nestStack.push([false, fireOnClose, i]);
+            vs = VisitState.Idle;
+            valueStart = -1;
+            literalEnd = -1;
+            onBrace({ i, c, t, side: Side.Left, stop, w: this });
             break;
-          case '}':
-            if (vs === VisitState.InNested && --valueDepth === 0) {
-              onValue({ i, c, t, s: valueStart, v: t.slice(valueStart, i + 1) }, stop);
-              vs = VisitState.Idle;
+          }
+          case '}': {
+            const frame = nestStack.pop()!;
+            if (frame[1]) {
+              // This { was a value — report the whole object text.
+              onValue({ i, c, t, s: frame[2], v: t.slice(frame[2], i + 1), stop, w: this });
             }
-            onBrace({ i, c, t, side: Side.Right }, stop);
+            vs = VisitState.Idle;
+            valueStart = -1;
+            literalEnd = -1;
+            onBrace({ i, c, t, side: Side.Right, stop, w: this });
             break;
-          case '[':
-            if (prevVs === VisitState.InNested) valueDepth++;
-            onBracket({ i, c, t, side: Side.Left }, stop);
+          }
+          case '[': {
+            const fireOnClose = vs === VisitState.AfterColon;
+            nestStack.push([true, fireOnClose, i]);
+            vs = VisitState.AfterColon; // arm tracking for first array item
+            valueStart = -1;
+            literalEnd = -1;
+            onBracket({ i, c, t, side: Side.Left, stop, w: this });
             break;
-          case ']':
-            if (vs === VisitState.InNested && --valueDepth === 0) {
-              onValue({ i, c, t, s: valueStart, v: t.slice(valueStart, i + 1) }, stop);
-              vs = VisitState.Idle;
+          }
+          case ']': {
+            const frame = nestStack.pop()!;
+            if (frame[1]) {
+              // This [ was a value — report the whole array text.
+              onValue({ i, c, t, s: frame[2], v: t.slice(frame[2], i + 1), stop, w: this });
             }
-            onBracket({ i, c, t, side: Side.Right }, stop);
+            vs = VisitState.Idle;
+            valueStart = -1;
+            literalEnd = -1;
+            onBracket({ i, c, t, side: Side.Right, stop, w: this });
             break;
+          }
           default:
             if (vs === VisitState.InLiteral) literalEnd = i; // keep cursor at last literal char
-            onOther({ i, c, t }, stop);
+            onOther({ i, c, t, stop, w: this });
             break;
         }
       } else {
         // ── Outside a string, fast path (no onValue tracking) ──────────────
         switch (c) {
           case ',':
-            onComma({ i, c, t }, stop);
+            onComma({ i, c, t, stop, w: this });
             break;
           case ':':
-            onColon({ i, c, t }, stop);
+            onColon({ i, c, t, stop, w: this });
             break;
           case '"':
             inString = true;
-            onQuote({ i, c, t, side: Side.Left }, stop);
+            onQuote({ i, c, t, side: Side.Left, stop, w: this });
             break;
           case '{':
-            onBrace({ i, c, t, side: Side.Left }, stop);
+            onBrace({ i, c, t, side: Side.Left, stop, w: this });
             break;
           case '}':
-            onBrace({ i, c, t, side: Side.Right }, stop);
+            onBrace({ i, c, t, side: Side.Right, stop, w: this });
             break;
           case '[':
-            onBracket({ i, c, t, side: Side.Left }, stop);
+            onBracket({ i, c, t, side: Side.Left, stop, w: this });
             break;
           case ']':
-            onBracket({ i, c, t, side: Side.Right }, stop);
+            onBracket({ i, c, t, side: Side.Right, stop, w: this });
             break;
           default:
-            onOther({ i, c, t }, stop);
+            onOther({ i, c, t, stop, w: this });
             break;
         }
       }
-      afterChar({ i, c, t }, stop);
+      afterChar({ i, c, t, stop, w: this });
     }
     return this;
   }
