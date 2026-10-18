@@ -35,6 +35,9 @@ const interpretNameWalker = new MiniWalker({
 });
 
 export function interpretName(text: string) {
+  // TODO(jsonpc#B): comments above array elements are currently rejected here,
+  // while the serializer still emits them. Decide on array-element comments
+  // support before changing this check.
   if (text[0] !== '"') {
     throw new Error(`Comments are only allowed directly above property names`);
   }

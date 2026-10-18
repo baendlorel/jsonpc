@@ -14,8 +14,10 @@ const isArrayStart = (lines: string[]) =>
 
 /** Serialize a primitive value to its JSONPC text representation. */
 function _serializePrimitive(v: any): string {
-  if (typeof v === 'number' && isNaN(v)) {
-    return 'NaN';
+  if (typeof v === 'number') {
+    if (isNaN(v)) return 'NaN';
+    if (v === Infinity) return 'Infinity';
+    if (v === -Infinity) return '-Infinity';
   }
   if (v instanceof Date) {
     return v.toISOString();
@@ -67,6 +69,8 @@ export function serialize(
       const raw = data[i];
 
       // * output array element comments before the element value
+      // TODO(jsonpc#B): element comments are emitted here but the parser rejects
+      // comments above array elements, so `stringify` output cannot be re-parsed.
       if (raw instanceof Value && raw.comments.length > 0) {
         raw.comments.forEach((c: string) => lines.push(`${elemIndent}${COMMENT_PREFIX} ${c}`));
       }

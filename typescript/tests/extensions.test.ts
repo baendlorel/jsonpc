@@ -152,3 +152,65 @@ describe('extensions: toObject', () => {
     expect(() => new JSONPC('{"a": nan}')).toThrow();
   });
 });
+
+describe('extensions: Infinity', () => {
+  it('should parse Infinity, +Infinity and -Infinity', () => {
+    const jpc = parse('{"a": Infinity, "b": +Infinity, "c": -Infinity}');
+    const obj = jpc.toObject();
+    expect(obj.a).toBe(Infinity);
+    expect(obj.b).toBe(Infinity);
+    expect(obj.c).toBe(-Infinity);
+  });
+
+  it('should parse Infinity nested in arrays', () => {
+    const obj = parse('{"arr": [Infinity, -Infinity, 1]}').toObject();
+    expect(obj.arr).toEqual([Infinity, -Infinity, 1]);
+  });
+
+  it('should stringify Infinity values as bare literals', () => {
+    const jpc = parse('{}');
+    jpc.set('a', { value: Infinity });
+    jpc.set('b', { value: -Infinity });
+    expect(jpc.stringify().trim()).toBe('{\n  "a": Infinity,\n  "b": -Infinity,\n}');
+  });
+
+  it('should round-trip Infinity', () => {
+    const jpc = parse('{}');
+    jpc.set('a', { value: Infinity });
+    jpc.set('b', { value: -Infinity });
+    const obj = parse(jpc.stringify()).toObject();
+    expect(obj.a).toBe(Infinity);
+    expect(obj.b).toBe(-Infinity);
+  });
+
+  it('should not treat quoted "Infinity" as a literal', () => {
+    expect(parse('{"a": "Infinity"}').toObject().a).toBe('Infinity');
+  });
+
+  it('should not accept lowercase or malformed spellings', () => {
+    expect(() => new JSONPC('{"a": infinity}')).toThrow();
+    expect(() => new JSONPC('{"a": INFINITY}')).toThrow();
+    expect(() => new JSONPC('{"a": +-Infinity}')).toThrow();
+  });
+});
+
+describe('extensions: date validation', () => {
+  it('should accept extended-year dates', () => {
+    const obj = parse('{"d": +010000-01-01T00:00:00.000Z, "e": -000001-01-01T00:00:00.000Z}').toObject();
+    expect(obj.d.toISOString()).toBe('+010000-01-01T00:00:00.000Z');
+    expect(obj.e.toISOString()).toBe('-000001-01-01T00:00:00.000Z');
+  });
+
+  it('should reject an out-of-range month at construction', () => {
+    expect(() => new JSONPC('{"d": 2024-13-01T00:00:00.000Z}')).toThrow(/Invalid date/);
+  });
+
+  it('should reject a rolled-over day at construction', () => {
+    expect(() => new JSONPC('{"d": 2024-02-31T00:00:00.000Z}')).toThrow(/Invalid date/);
+  });
+
+  it('should reject non-3-digit milliseconds and timezone offsets', () => {
+    expect(() => new JSONPC('{"d": 2024-01-02T03:04:05.678000Z}')).toThrow();
+    expect(() => new JSONPC('{"d": 2024-01-02T03:04:05.678+08:00}')).toThrow();
+  });
+});

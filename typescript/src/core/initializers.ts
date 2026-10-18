@@ -2,7 +2,7 @@ import { interpretName } from '../walkers/interpret-name.js';
 import { MiniWalker } from '../walkers/mini-walker.js';
 import { _isArray, _keys, _notComment, _stripPrefix } from './common.js';
 import { _set, _get, _delete } from './path-map.js';
-import { BIGINT_TAG, DT_TAG, genUname, NaN_TAG } from './uname.js';
+import { BIGINT_TAG, DT_TAG, genUname, INF_TAG, NaN_TAG } from './uname.js';
 import { type UnameKeyMap, Value } from './value.js';
 
 /** Convert tagged strings back to their real JS values after JSON.parse. */
@@ -13,8 +13,18 @@ export function untagExtensions(value: any): any {
   if (value === NaN_TAG) {
     return NaN;
   }
+  if (value.startsWith(INF_TAG)) {
+    return value.endsWith('-') ? -Infinity : Infinity;
+  }
   if (value.startsWith(DT_TAG)) {
-    return new Date(value.slice(DT_TAG.length));
+    const raw = value.slice(DT_TAG.length);
+    const d = new Date(raw);
+    // Reject invalid dates (`2024-13-01`) and silently-rolled ones
+    // (`2024-02-31` → `2024-03-02`) by requiring an exact round-trip.
+    if (Number.isNaN(d.getTime()) || d.toISOString() !== raw) {
+      throw new SyntaxError(`Invalid date extension: ${raw}`);
+    }
+    return d;
   }
   if (value.startsWith(BIGINT_TAG)) {
     return BigInt(value.slice(BIGINT_TAG.length, -1));
@@ -25,6 +35,8 @@ export function untagExtensions(value: any): any {
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const ISO_DATE_EXT = /^[+-]\d{6}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const BIGINT_LITERAL = /^-?\d+n$/;
+/** `Infinity` / `+Infinity` / `-Infinity`. */
+const INFINITY_LITERAL = /^[+-]?Infinity$/;
 
 /**
  * Replace JSONPC-only literals (`NaN`, bare ISO dates, BigInt like `42n`)
@@ -38,6 +50,8 @@ export function tagExtensions(text: string): string {
     onValue: ({ s, v, w }) => {
       if (v === 'NaN') {
         w.replace(s, s + v.length, `"${NaN_TAG}"`);
+      } else if (INFINITY_LITERAL.test(v)) {
+        w.replace(s, s + v.length, `"${INF_TAG}${v.startsWith('-') ? '-' : '+'}"`);
       } else if (ISO_DATE.test(v) || ISO_DATE_EXT.test(v)) {
         w.replace(s, s + v.length, `"${DT_TAG}${v}"`);
       } else if (BIGINT_LITERAL.test(v)) {

@@ -11,7 +11,7 @@ https://img.shields.io/npm/v/jsonpc-ts.svg)](https://www.npmjs.com/package/jsonp
 
 </div>
 
-**JSON with Property Comments** — A lightweight JSON variant that allows single-line comments `//`, trailing commas, and extended literals (`NaN`, ISO dates, BigInt).
+**JSON with Property Comments** — A lightweight JSON variant that allows single-line comments `//`, trailing commas, and extended literals (`NaN`, `Infinity`, ISO dates, BigInt).
 
 ## Syntax
 
@@ -28,8 +28,11 @@ https://img.shields.io/npm/v/jsonpc-ts.svg)](https://www.npmjs.com/package/jsonp
 
 _Other positions and block comments are not allowed._
 
-On top of standard JSON values, **jsonpc** also accepts three extended literals:
-`NaN`, bare ISO dates and BigInt values — see [Extended Values](#extended-values).
+On top of standard JSON values, **jsonpc** also accepts four extended literals:
+`NaN`, `Infinity` (`+Infinity` / `-Infinity`), bare ISO dates and BigInt values —
+see [Extended Values](#extended-values).
+
+The full grammar is specified in [JSONPC_SPEC.md](../JSONPC_SPEC.md).
 
 ### Examples
 
@@ -40,7 +43,7 @@ On top of standard JSON values, **jsonpc** also accepts three extended literals:
   // ✅ Valid: Comment above property name
   "name": "Alice",
 
-  // ✅ Valid: Comment above array element (primitive)
+  // ✅ Valid: Comment above property name (the value happens to be an array)
   "items": [
     // ❌ Invalid: Comment not above a property
     1,
@@ -148,7 +151,7 @@ const clean = jsonpc.toObject();
 
 ## Extended Values
 
-Standard JSON cannot represent `NaN`, `Date` or `BigInt`. **jsonpc** lets you
+Standard JSON cannot represent `NaN`, `Infinity`, `Date` or `BigInt`. **jsonpc** lets you
 write them as bare literals, anywhere a value is allowed (object property
 values and array elements):
 
@@ -156,6 +159,10 @@ values and array elements):
 {
   // Not a number
   "nan": NaN,
+
+  // Infinity, with an optional sign
+  "max": Infinity,
+  "min": -Infinity,
 
   // Date, written exactly like Date#toISOString()
   "createdAt": 2024-01-02T03:04:05.678Z,
@@ -170,6 +177,8 @@ values and array elements):
 | Literal                    | Resulting JS value |
 | -------------------------- | ------------------ |
 | `NaN`                      | `NaN`              |
+| `Infinity` / `+Infinity`   | `Infinity`         |
+| `-Infinity`                | `-Infinity`        |
 | `YYYY-MM-DDTHH:mm:ss.sssZ` | `Date`             |
 | `-?<digits>n`              | `BigInt`           |
 
@@ -204,26 +213,34 @@ jsonpc.stringify();
 
 Notes:
 
-- `NaN` must be written exactly as `NaN`. `Infinity`, `-Infinity` and
-  `undefined` are **not** supported.
-- Dates are recognized only in full `Date#toISOString()` form, including
-  milliseconds and the trailing `Z`.
-- BigInt may be negative (`-42n`).
-- Quoted look-alikes are never converted: `"NaN"`, `"42n"` and
+- Number literals are case- and spelling-sensitive: `NaN` and
+  `Infinity` / `+Infinity` / `-Infinity` only. `inf`, `INF` and `undefined`
+  are **not** supported.
+- Dates are recognized only in exact `Date#toISOString()` form: 3-digit
+  milliseconds and a trailing `Z`. Timezone offsets and 6/9-digit
+  microseconds are rejected. Extended years (`+010000-…`, `-000001-…`) are
+  accepted.
+- Invalid dates are rejected at parse time, including calendar-invalid ones
+  such as `2024-02-31T00:00:00.000Z` (which JS would silently roll over) and
+  `2024-13-01T00:00:00.000Z`.
+- BigInt may be negative (`-42n`). Integers beyond ±2^53 are only exact when
+  written with the `n` suffix; without it, precision follows the host
+  language's number type.
+- Quoted look-alikes are never converted: `"NaN"`, `"Infinity"`, `"42n"` and
   `"2024-01-02T03:04:05.678Z"` remain plain strings.
 - A custom `reviver` passed to `parse()` receives already-converted
-  `NaN` / `Date` / `BigInt` values.
+  `NaN` / `Infinity` / `Date` / `BigInt` values.
 - Files using extended literals are **not** valid standard JSON — other
   parsers will reject them. `toObject()` and quoted strings are the
   interop-friendly alternatives.
 
 ## Comparison with Alternatives
 
-| Solution   | Custom Parser | Arbitrary Position Comments | Trailing Commas | NaN / Date / BigInt | Size   |
-| ---------- | ------------- | --------------------------- | --------------- | ------------------- | ------ |
-| **jsonpc** | ❌             | ❌                           | ✅               | ✅                   | Small  |
-| json5      | ✅             | ✅                           | ✅               | Partial (`NaN`)     | Large  |
-| JSONC      | ✅             | ✅                           | ❌               | ❌                   | Medium |
+| Solution   | Custom Parser | Arbitrary Position Comments | Trailing Commas | NaN / Infinity / Date / BigInt | Size   |
+| ---------- | ------------- | --------------------------- | --------------- | ------------------------------ | ------ |
+| **jsonpc** | ❌             | ❌                           | ✅               | ✅                              | Small  |
+| json5      | ✅             | ✅                           | ✅               | Partial (`NaN`, `Infinity`)    | Large  |
+| JSONC      | ✅             | ✅                           | ❌               | ❌                              | Medium |
 
 jsonpc trades some flexibility for simplicity and performance by:
 - Only allowing comments at specific, predictable positions (above properties)
