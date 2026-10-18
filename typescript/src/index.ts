@@ -1,5 +1,5 @@
 import { aggregate, interpret, tagExtensions, untagExtensions } from './core/initializers.js';
-import { _addPrefix, _isArray, _keys, _notComment, _parse, _split, _stripPrefix } from './core/common.js';
+import { _addPrefix, _isArray, _notComment, _split, _stripPrefix } from './core/common.js';
 import { _set, _delete, _get, _has } from './core/path-map.js';
 
 import { stripTrailingCommas } from './walkers/trailing-comma.js';
@@ -10,8 +10,6 @@ interface Entry {
   value: any;
   comments?: string[];
 }
-
-// TODO 尝试增加date、bigint、NaN的支持
 
 export class JSONPC {
   /**
