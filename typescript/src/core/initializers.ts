@@ -68,7 +68,7 @@ export function interpret(aggregated: Array<string | string[]>, reviver: (this: 
         walker.replace(s, s + v.length, `"${DT_TAG}${v}"`);
       }
     },
-  });
+  }).run();
 
   const stack: Array<{ o: any; k: string; v: Value }> = [];
   const data = JSON.parse(walker.apply(), function (this: any, key: string, value: any) {
