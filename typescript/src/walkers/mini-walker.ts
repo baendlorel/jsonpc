@@ -77,25 +77,9 @@ interface WalkerOptions {
   onOther: (args: WalkerHandlerArgs) => void;
   afterChar: (args: WalkerHandlerArgs) => void;
 
-  /**
-   * Fires for every JSON value at **any depth**:
-   *
-   * - **Scalars** (string / number / bool / null / bare literal like `NaN`):
-   *   fired when the token ends.
-   * - **Object / array** that appears as a value (i.e. is the RHS of `:` or
-   *   an element of an enclosing array): fired when its closing `}`/`]` is
-   *   reached, with `v` containing the full source text including delimiters.
-   *
-   * Both levels fire independently — for `"arr": [NaN, 1]` you get three
-   * calls: `NaN`, `1`, and `[NaN, 1]`.
-   *
-   * A top-level `{…}` or `[…]` that is not itself a property value does
-   * **not** fire; only its contents do.
-   *
-   * `s` / `i` are the start / end positions in the source text, useful for
-   * in-place replacements via {@link MiniWalker.replace}.
-   */
   onValue: (args: WalkerHandlerArgsWithValue) => void;
+
+  onArrayItem: (args: WalkerHandlerArgsWithValue) => void;
 }
 
 const enum Op {
@@ -130,6 +114,7 @@ export class MiniWalker {
   private onOther: WalkerOptions['onOther'];
   private afterChar: WalkerOptions['afterChar'];
   private onValue: WalkerOptions['onValue'];
+  private onArrayItem: WalkerOptions['onArrayItem'];
 
   private inString: boolean;
   private text = '';
@@ -148,6 +133,7 @@ export class MiniWalker {
     onOther = _noop,
     afterChar = _noop,
     onValue = _noop,
+    onArrayItem = _noop,
   }: Partial<WalkerOptions>) {
     this.inString = inString;
     this.text = text!;
@@ -161,6 +147,7 @@ export class MiniWalker {
     this.onOther = onOther;
     this.afterChar = afterChar;
     this.onValue = onValue;
+    this.onArrayItem = onArrayItem;
   }
 
   run(start = 0, end = this.text.length): this {
@@ -170,11 +157,23 @@ export class MiniWalker {
     const stop = () => (end = NaN);
 
     // Hoist to locals to avoid repeated property lookups in the hot loop.
-    const { onComma, onColon, onQuote, onBrace, onBracket, onEscape, onInString, onOther, afterChar, onValue } = this;
+    const {
+      onComma,
+      onColon,
+      onQuote,
+      onBrace,
+      onBracket,
+      onEscape,
+      onInString,
+      onOther,
+      afterChar,
+      onValue,
+      onArrayItem,
+    } = this;
 
     // Value-tracking state — reset fresh every run().
-    // Skip all overhead when onValue was not provided.
-    const trackValues = onValue !== (_noop as any);
+    // Skip all overhead when neither onValue nor onArrayItem was provided.
+    const trackValues = onValue !== (_noop as any) || onArrayItem !== (_noop as any);
     let vs = VisitState.Idle;
     let valueStart = -1;
     let literalEnd = -1;
@@ -205,6 +204,9 @@ export class MiniWalker {
           // String value just finished.
           if (trackValues && vs === VisitState.InString) {
             onValue({ i, c, t, s: valueStart, v: t.slice(valueStart, i + 1), stop, w: this });
+            if (nestStack.length > 0 && nestStack[nestStack.length - 1][0]) {
+              onArrayItem({ i, c, t, s: valueStart, v: t.slice(valueStart, i + 1), stop, w: this });
+            }
             vs = VisitState.Idle;
           }
         } else {
@@ -233,6 +235,17 @@ export class MiniWalker {
             stop,
             w: this,
           });
+          if (nestStack.length > 0 && nestStack[nestStack.length - 1][0]) {
+            onArrayItem({
+              i: literalEnd,
+              c: t[literalEnd],
+              s: valueStart,
+              t,
+              v: t.slice(valueStart, literalEnd + 1),
+              stop,
+              w: this,
+            });
+          }
           vs = VisitState.Idle;
         }
 
@@ -287,6 +300,10 @@ export class MiniWalker {
               // This { was a value — report the whole object text.
               onValue({ i, c, t, s: frame[2], v: t.slice(frame[2], i + 1), stop, w: this });
             }
+            // If the enclosing container is an array, this { was one of its items.
+            if (frame[1] && nestStack.length > 0 && nestStack[nestStack.length - 1][0]) {
+              onArrayItem({ i, c, t, s: frame[2], v: t.slice(frame[2], i + 1), stop, w: this });
+            }
             vs = VisitState.Idle;
             valueStart = -1;
             literalEnd = -1;
@@ -307,6 +324,10 @@ export class MiniWalker {
             if (frame[1]) {
               // This [ was a value — report the whole array text.
               onValue({ i, c, t, s: frame[2], v: t.slice(frame[2], i + 1), stop, w: this });
+            }
+            // If the enclosing container is an array, this [ was one of its items.
+            if (frame[1] && nestStack.length > 0 && nestStack[nestStack.length - 1][0]) {
+              onArrayItem({ i, c, t, s: frame[2], v: t.slice(frame[2], i + 1), stop, w: this });
             }
             vs = VisitState.Idle;
             valueStart = -1;
