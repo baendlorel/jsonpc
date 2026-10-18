@@ -1,4 +1,5 @@
 import { MiniWalker } from '../src/walkers/mini-walker.js';
+import { stripTrailingCommas } from '../src/walkers/trailing-comma.js';
 
 const text = `
 
@@ -21,11 +22,17 @@ const walker = new MiniWalker({
   onValue: ({ i, c, t, s, v, stop, w }) => {
     console.log(v);
     if (v === 'NaN') {
-      w.replace(s, s + v.length, 'NAN标记');
+      w.replace(s, s + v.length, '"NAN标记"');
     }
   },
 }).run();
 
-const t = walker.apply();
+const t = walker
+  .apply()
+  .split('\n')
+  .filter((line) => !line.trim().startsWith('//'))
+  .join('');
 
-console.log(t, JSON.parse(t));
+const rawJSON = stripTrailingCommas(t);
+
+console.log(rawJSON, JSON.parse(rawJSON));
