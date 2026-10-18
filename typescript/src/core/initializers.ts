@@ -22,9 +22,8 @@ export function untagExtensions(value: any): any {
   return value;
 }
 
-/** ISO 8601 date, as produced by `Date#toISOString`. */
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-/** BigInt literal, e.g. `42n` or `-42n`. */
+const ISO_DATE_EXT = /^[+-]\d{6}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const BIGINT_LITERAL = /^-?\d+n$/;
 
 /**
@@ -39,7 +38,7 @@ export function tagExtensions(text: string): string {
     onValue: ({ s, v, w }) => {
       if (v === 'NaN') {
         w.replace(s, s + v.length, `"${NaN_TAG}"`);
-      } else if (ISO_DATE.test(v)) {
+      } else if (ISO_DATE.test(v) || ISO_DATE_EXT.test(v)) {
         w.replace(s, s + v.length, `"${DT_TAG}${v}"`);
       } else if (BIGINT_LITERAL.test(v)) {
         w.replace(s, s + v.length, `"${BIGINT_TAG}${v}"`);
