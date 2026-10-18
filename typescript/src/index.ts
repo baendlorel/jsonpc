@@ -1,4 +1,4 @@
-import { aggregate, interpret } from './core/initializers.js';
+import { aggregate, interpret, tagExtensions, untagExtensions } from './core/initializers.js';
 import { _addPrefix, _isArray, _keys, _notComment, _parse, _split, _stripPrefix } from './core/common.js';
 import { _set, _delete, _get, _has } from './core/path-map.js';
 
@@ -37,7 +37,9 @@ export class JSONPC {
       .filter((v) => v.length > 0);
 
     // # Check if the json is valid.
-    void JSON.parse(lines.filter(_notComment).join(''));
+    // Extensions (NaN / Date / BigInt) are tagged first so that the check sees
+    // valid JSON.
+    void JSON.parse(tagExtensions(lines.filter(_notComment).join('')));
 
     // # Whole file level comments
     const start = lines.findIndex(_notComment);
@@ -140,10 +142,13 @@ export class JSONPC {
    * Return a pure js object, stripping all comment artifacts.
    * - The internal data is already clean (uuid keys removed by visit),
    *   so this is a simple deep clone.
+   * - JSONPC extensions (`NaN`, `Date`, `BigInt`) are converted to real
+   *   JS values.
    */
   toObject<T = any>(): T {
     const lines = serialize(this.data, 0, defaultReplacer).filter(_notComment);
-    return _parse(stripTrailingCommas(lines.join('\n'))) as T;
+    const tagged = tagExtensions(stripTrailingCommas(lines.join('\n')));
+    return JSON.parse(tagged, (_, v) => untagExtensions(v)) as T;
   }
 
   /**

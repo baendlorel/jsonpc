@@ -6,7 +6,7 @@ import { BIGINT_TAG, DT_TAG, genUname, NaN_TAG } from './uname.js';
 import { type UnameKeyMap, Value } from './value.js';
 
 /** Convert tagged strings back to their real JS values after JSON.parse. */
-function _unwrapTag(value: any): any {
+export function untagExtensions(value: any): any {
   if (typeof value !== 'string') {
     return value;
   }
@@ -20,6 +20,34 @@ function _unwrapTag(value: any): any {
     return BigInt(value.slice(BIGINT_TAG.length, -1));
   } // strip trailing 'n'
   return value;
+}
+
+/** ISO 8601 date, as produced by `Date#toISOString`. */
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+/** BigInt literal, e.g. `42n` or `-42n`. */
+const BIGINT_LITERAL = /^-?\d+n$/;
+
+/**
+ * Replace JSONPC-only literals (`NaN`, bare ISO dates, BigInt like `42n`)
+ * with tagged strings, so the result becomes valid input for `JSON.parse`.
+ * Must run before any `JSON.parse` validation.
+ */
+export function tagExtensions(text: string): string {
+  return new MiniWalker({
+    text,
+    inString: false,
+    onValue: ({ s, v, w }) => {
+      if (v === 'NaN') {
+        w.replace(s, s + v.length, `"${NaN_TAG}"`);
+      } else if (ISO_DATE.test(v)) {
+        w.replace(s, s + v.length, `"${DT_TAG}${v}"`);
+      } else if (BIGINT_LITERAL.test(v)) {
+        w.replace(s, s + v.length, `"${BIGINT_TAG}${v}"`);
+      }
+    },
+  })
+    .run()
+    .apply();
 }
 
 /**
@@ -66,31 +94,10 @@ export function interpret(aggregated: Array<string | string[]>, reviver: (this: 
     })
     .join('\n');
 
-  const walker = new MiniWalker({
-    text: text0,
-    inString: false,
-    onValue: ({ i, c, t, s, v }) => {
-      // NaN support
-      if (v === 'NaN') {
-        walker.replace(s, s + v.length, `"${NaN_TAG}"`);
-      }
-
-      // ISO Date support
-      if (/^[\d]+-[\d]{2}-[\d]{2}T[\d]{2}:[\d]{2}:[\d]{2}.\d{3}Z$/.test(v)) {
-        walker.replace(s, s + v.length, `"${DT_TAG}${v}"`);
-      }
-
-      // bigint support
-      if (/^\d+n$/.test(v)) {
-        walker.replace(s, s + v.length, `"${BIGINT_TAG}${v}"`);
-      }
-
-      // TODO 到时候恢复它们
-    },
-  }).run();
+  const tagged = tagExtensions(text0);
 
   const stack: Array<{ o: any; k: string; v: Value }> = [];
-  const data = JSON.parse(walker.apply(), function (this: any, key: string, value: any) {
+  const data = JSON.parse(tagged, function (this: any, key: string, value: any) {
     if (__IS_DEV__) {
       u.has(key) && console.log('正在解析', key);
     }
@@ -99,14 +106,14 @@ export function interpret(aggregated: Array<string | string[]>, reviver: (this: 
       const last = stack[stack.length - 1];
       if (last?.o === this && last.k === key) {
         stack.pop();
-        last.v.value = reviver.call(this, key, _unwrapTag(value));
+        last.v.value = reviver.call(this, key, untagExtensions(value));
         return last.v;
       }
     }
 
     const v = u.get(key);
     if (!v) {
-      return reviver.call(this, key, _unwrapTag(value));
+      return reviver.call(this, key, untagExtensions(value));
     }
 
     // & value of the uname key is the original key

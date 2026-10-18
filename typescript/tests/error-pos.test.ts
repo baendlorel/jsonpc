@@ -35,6 +35,6 @@ describe('Error positions', () => {
       "key": "value",
       // ❌ Invalid: Comment not above a property
     }`;
-    expect(() => new JSONPC(text)).toThrow(/xxx/);
+    expect(() => new JSONPC(text)).toThrow(/Expected .*property name/);
   });
 });

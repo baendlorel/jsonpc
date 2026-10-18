@@ -48,8 +48,9 @@ export interface WalkerHandlerArgsWithValue extends WalkerHandlerArgs {
    * For literal values `i`/`c` point to the **last character of the token**
    * (not to the following separator).
    *
-   * Values nested inside an object/array value are NOT reported individually —
-   * they are part of the outer value's `v`.
+   * Values nested inside an object/array are reported as well, each through
+   * its own `onValue` call; a container's `v` is reported in addition to
+   * its children.
    */
   v: string;
 

@@ -4,6 +4,9 @@ import { _get } from './path-map.js';
 import { Value } from './value.js';
 
 const appendLast = (lines: string[], s: string) => (lines[lines.length - 1] += s);
+
+/** `Date` is an object but must be serialized as a primitive extension. */
+const _isContainer = (v: any): boolean => _isObject(v) && !(v instanceof Date);
 const isArrayStart = (lines: string[]) =>
   lines.length === 0 ||
   lines[lines.length - 1].endsWith('[') ||
@@ -37,8 +40,8 @@ export function serialize(
 ): string[] {
   const prefix = ' '.repeat(depth * pad);
 
-  // # Primitive
-  if (!_isObject(data)) {
+  // # Primitive (Date is an object, but a primitive extension)
+  if (!_isContainer(data)) {
     lines.push(`${prefix}${_serializePrimitive(data)}`);
     return lines;
   }
@@ -131,7 +134,7 @@ export function serialize(
     const keyLine = `${indent}"${k}": `;
     lines.push(keyLine);
 
-    if (_isObject(v)) {
+    if (_isContainer(v)) {
       serialize(v, pad, replacer, depth + 1, p, lines);
     } else {
       appendLast(lines, _serializePrimitive(v));
